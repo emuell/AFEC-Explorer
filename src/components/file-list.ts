@@ -1,0 +1,467 @@
+import { css, html, PropertyValues, render } from 'lit'
+import { customElement, query, state } from 'lit/decorators.js'
+import { MobxLitElement } from '@adobe/lit-mobx';
+import * as mobx from 'mobx'
+import prettyBytes from 'pretty-bytes';
+
+import { 
+  Grid, GridActiveItemChangedEvent, GridColumn, GridItemModel,
+  GridDataProviderCallback, GridDataProviderParams, GridSorterDefinition
+} from '@vaadin/grid';
+
+import { appState } from '../app-state';
+import { File } from '../models/file';
+
+import './error-message';
+import './spinner';
+
+import '@vaadin/grid';
+import '@vaadin/grid/vaadin-grid-sort-column.js';
+import '@vaadin/text-field';
+import '@vaadin/button';
+import '@vaadin/notification';
+
+// -------------------------------------------------------------------------------------------------
+ 
+// File list / table.
+
+@customElement('afec-file-list')
+export class FileList extends MobxLitElement {
+  
+  @mobx.observable
+  private _rootPath: string = "";
+  
+  // NB: not a state or observable: data-provider update is manually triggered 
+  private _files: File[] = [];
+  
+  @state()
+  private _fetchError: string = "";
+
+  @state() 
+  private _selectedFiles: File[] = [];  
+  private _selectedItemsClicked = new Set<string>();
+
+  @query("#grid")
+  private _grid!: Grid<File> | null;
+  private _recalculateColumnWidths: boolean = false;
+
+  constructor() {
+    super();
+    mobx.makeObservable(this);
+
+    // fetch file list on repo path, snapshot or root dir changes
+    mobx.reaction(
+      () => appState.databasePath + ":" + this._rootPath,
+      () => this._fetchFiles(),
+      { fireImmediately: true }
+    );
+
+    // bind context for renderers
+    this._actionRenderer = this._actionRenderer.bind(this);
+    // bind context for data provider
+    this._dataProvider = this._dataProvider.bind(this);
+  }
+
+  @mobx.action
+  private _setRootPath(newPath: string): void {
+    this._rootPath = newPath;
+  }
+
+  private _parentRootPath(path: string): string | undefined {
+    let rootPath = path.trim();
+    if (rootPath && rootPath != "/") {
+      if (rootPath.endsWith("/")) {
+        rootPath = rootPath.substring(0, rootPath.length - 1);
+      }
+      return rootPath.substring(0, rootPath.lastIndexOf("/")) || "/";
+    }
+    return undefined;
+  }
+  
+  private _playFile(_file: File) {
+    // TODO
+  }
+
+  private _fetchFiles() {
+    if (! appState.databasePath) {
+      this._fetchError = "No database selected";
+      this._selectedFiles = [];
+      this._files = [];
+      return;
+    }
+    // memorize rootpath we're fetching files for
+    const rootPath = this._rootPath;
+    appState.fetchFiles(rootPath)
+      .then((files) => {
+        // assign and request data provider update
+        this._selectedFiles = [];
+        this._files = files;
+        if (this._grid) {
+          this._grid.clearCache();
+        }
+        // request auto column width update
+        this._recalculateColumnWidths = true;
+        // reset fetch errors - if any
+        this._fetchError = "";
+      })
+      .catch((error) => {
+        this._fetchError = error.message || String(error);
+        this._selectedFiles = [];
+        this._files = [];
+      })
+  }
+
+  private _sortFiles(params: GridDataProviderParams<File>): File[] {
+
+    // sorting helper functions, copied from @vaadin-grid/array-data-provider.js
+    function normalizeEmptyValue(value: any) {
+      if ([undefined, null].includes(value)) {
+        return '';
+      } else if (isNaN(value)) {
+        return value.toString();
+      }
+      return value;
+    }
+    function compare(a: any, b: any) {
+      a = normalizeEmptyValue(a);
+      b = normalizeEmptyValue(b);
+
+      if (a < b) {
+        return -1;
+      }
+      if (a > b) {
+        return 1;
+      }
+      return 0;
+    }
+    function get(path: string, object: any) {
+      return path.split('.').reduce((obj, property) => obj[property], object);
+    }
+
+    // get sort order (multi sorting not supported ATM)
+    let sortOrder: GridSorterDefinition = {
+      path: "name",
+      direction: "asc"
+    };
+    if (params.sortOrders && params.sortOrders.length) {
+      if (params.sortOrders[0].direction) {
+        sortOrder = params.sortOrders[0];
+      }
+    }
+
+    // get items from files and apply our customized sorting
+    const items = Array.from(this._files);
+    items.sort((a: File, b: File) => {
+      // keep directories at top or bottom when sorting by name
+      if (sortOrder.path === "name") {
+        // and do a "natural" sort on names
+        const options = { numeric: true, sensitivity: "base" };
+        if (sortOrder.direction === 'asc') {
+          return a.filename.localeCompare(b.filename, undefined, options);
+        } else { 
+          return b.filename.localeCompare(a.filename, undefined, options);
+        }
+      } else {
+        // apply custom sorting 
+        if (sortOrder.direction === 'asc') {
+          return compare(get(sortOrder.path, a), get(sortOrder.path, b));
+        } else { 
+          return compare(get(sortOrder.path, b), get(sortOrder.path, a));
+        }
+      }
+    });
+  
+    return items;
+  }
+
+  private _dataProvider(
+    params: GridDataProviderParams<File>,
+    callback: GridDataProviderCallback<File>
+  ) {
+    const items = this._sortFiles(params);
+    const count = Math.min(items.length, params.pageSize);
+    const start = params.page * count;
+    const end = start + count;
+    if (start !== 0 || end !== items.length) {
+      callback(items.slice(start, end), items.length);
+    } else {
+      callback(items, items.length);
+    }
+  }
+
+  private _activeItemChanged(e: GridActiveItemChangedEvent<File>) {
+    const item = e.detail.value;
+    // don't deselect selected itesm
+    if (item) {
+      this._selectedFiles = [item];
+    }
+    // double click handling
+    const doubleClickItem = this._selectedFiles.length ?
+      this._selectedFiles[0] : undefined;
+    if (doubleClickItem) {
+      this._selectedItemsClicked.add(doubleClickItem.filename);
+      setTimeout(() => {
+        this._selectedItemsClicked.delete(doubleClickItem.filename);
+      }, 500);
+    }
+  }
+
+  private _actionRenderer(
+    root: HTMLElement, 
+    _column: GridColumn<File>, 
+    model: GridItemModel<File>
+  ) {
+    render(html`
+        <vaadin-button theme="small secondary icon" style="height: 1.5rem; margin: unset;padding: 0;" 
+            @click=${() => this._playFile(model.item)}>
+          <vaadin-icon icon="lumo:play"></vaadin-icon>
+        </vaadin-button>
+      `, root)
+  }
+ 
+  private _nameRenderer(
+    root: HTMLElement, 
+    _column: GridColumn<File>, 
+    model: GridItemModel<File>
+  ) {
+    let name = model.item.filename;
+    if (name.startsWith("./")) {
+      name = name.substring(2);
+    }
+    render(html`${name}`, root);
+  }
+  
+  private _classNameRenderer(
+    root: HTMLElement, 
+    _column: GridColumn<File>, 
+    model: GridItemModel<File>
+  ) {
+    const classNames = model.item.classes_VS;
+    if (!classNames.length) {
+      render(html`-`, root);
+      return;
+    }
+    render(html`${classNames.join(",")}`, root);
+  }
+  
+  private _categoryNameRenderer(
+    root: HTMLElement, 
+    _column: GridColumn<File>, 
+    model: GridItemModel<File>
+  ) {
+    const categoryNames = model.item.categories_VS;
+    if (!categoryNames.length) {
+      render(html`-`, root);
+      return;
+    }
+    const nameFilter = (v: string) => {
+      if (v.startsWith("Perc ")) {
+        return v.substring("Perc ".length)
+      } else if (v.startsWith("Tone ")) {
+        return v.substring("Tone ".length)
+      }
+      return v;
+    }
+    render(html`${categoryNames.map(nameFilter).join(",")}`, root);
+  }
+  
+  private _timeRenderer(
+    root: HTMLElement, 
+    column: GridColumn<File>, 
+    model: GridItemModel<File>
+  ) {
+    const timestamp = (model.item as any)[column.path as string] as number;
+    const date = new Date(timestamp * 1000);
+    const timeString = date.getDate()+
+      "/"+(date.getMonth()+1)+
+      "/"+date.getFullYear()+
+      " "+date.getHours()+
+      ":"+date.getMinutes()+
+      ":"+date.getSeconds();
+    render(html`${timeString}`, root);
+  }
+
+  private _sizeRenderer(
+    root: HTMLElement, 
+    column: GridColumn<File>, 
+    model: GridItemModel<File>
+  ) {
+    const bytes = (model.item as any)[column.path as string] as number;
+    render(html`${prettyBytes(bytes)}`, root);
+  }
+ 
+  private _lengthRenderer(
+    root: HTMLElement, 
+    column: GridColumn<File>, 
+    model: GridItemModel<File>
+  ) {
+    const time = (model.item as any)[column.path as string] as number;
+    const hours = Math.floor(time / 60 / 60);
+    const minutes = Math.floor(time / 60) % 60;
+    const seconds = Math.floor(time - minutes * 60);
+    const milliseconds = String(time).slice(-3);
+    
+    const pad = function(num: number | string, size: number) { 
+      return ('000' + num).slice(size * -1); 
+    };
+    const duration = pad(minutes + hours * 60, 2) + ':' + 
+      pad(seconds, 2) + '.' + pad(milliseconds, 3);
+
+    render(html`${duration}`, root);
+  }
+
+  private _percentageRenderer(
+    root: HTMLElement, 
+    column: GridColumn<File>, 
+    model: GridItemModel<File>
+  ) {
+    const value = (model.item as any)[column.path as string] as number;
+    render(html`${Math.round(value * 100) + "%"}`, root);
+  }
+  
+  static styles = css`
+    :host {
+      display: flex;
+      flex-direction: column;
+    }
+    #header {
+      align-items: center; 
+      background: var(--lumo-shade-10pct);
+      padding: 4px;
+    }
+    #header #title {
+      flex: 0;
+      margin: 0px 10px;
+      padding: 4px 0px;
+     }
+    #header #rootPath {
+      flex: 1;
+      padding: unset;
+      padding-left: 4px;
+      padding-right: 4px;
+    }
+    #loading {
+      height: 100%; 
+      align-items: center;
+      justify-content: center;
+    }
+    #grid {
+      height: unset;
+      flex: 1;
+      margin: 0px 8px;
+    }
+  `;
+
+  updated(changedProperties: PropertyValues) {
+    super.updated(changedProperties);
+    // apply auto column width updates after content got rendered
+    if (this._recalculateColumnWidths) {
+      this._recalculateColumnWidths = false;
+      if (this._grid) {
+        this._grid.recalculateColumnWidths();
+      }
+    }
+  }
+
+  render() {
+    const header = html`
+      <vaadin-horizontal-layout id="header">
+        <strong id="title">Files</strong>
+        <vaadin-button id="rootPathButton" theme="icon small secondary" 
+            @click=${() => this._setRootPath(this._parentRootPath(this._rootPath) || "/")}
+            .disabled=${! this._parentRootPath(this._rootPath)}
+            .hidden=${! appState.databasePath}>
+          ${appState.isLoadingFiles 
+              ? html`<afec-spinner size="16px" style="margin: 0 2px;"></afec-spinner>` 
+              : html`<vaadin-icon icon="vaadin:level-up"></vaadin-icon>`}
+        </vaadin-button>
+        <vaadin-text-field 
+          id="rootPath"
+          theme="small"
+          placeholder="/"
+          value=${this._rootPath}
+          .disabled=${appState.isLoadingFiles > 0} 
+          .hidden=${! appState.databasePath}
+          @change=${(event: CustomEvent) => {
+            this._setRootPath((event.target as HTMLInputElement).value); 
+          }} 
+          clear-button-visible
+        >
+          <vaadin-icon slot="prefix" icon="vaadin:folder"></vaadin-icon>
+        </vaadin-text-field>
+      </vaadin-horizontal-layout>
+    `;
+    // error
+    if (this._fetchError && appState.isLoadingFiles === 0) {
+      let errorMessage = this._fetchError;
+      if (appState.databasePath) {
+       errorMessage = "Failed to fetch files: " + errorMessage;
+      }
+      return html`
+        ${header}
+        <afec-error-message 
+          type=${appState.databasePath ? "error" : "info"}
+          message=${errorMessage}>
+        </afec-error-message>
+      `;
+    }
+    // loading
+    if (appState.isLoadingFiles > 0) {
+      return html`
+        ${header}
+        <vaadin-horizontal-layout id="loading">
+          <afec-spinner size="24px"></afec-spinner>
+        </vaadin-horizontal-layout>
+      `;
+    }
+    // grid
+    return html`
+      ${header}
+      <vaadin-grid
+        id="grid"
+        theme="compact no-border small" 
+        .dataProvider=${this._dataProvider}
+        .selectedItems=${this._selectedFiles}
+        @active-item-changed=${this._activeItemChanged}
+      >
+        <vaadin-grid-column .flexGrow=${0} .autoWidth=${true} path="path" header="" frozen
+          .renderer=${this._actionRenderer}></vaadin-grid-column>
+          <vaadin-grid-sort-column .flexGrow=${2} .width=${"12rem"} path="name" direction="asc" frozen resizable
+          .renderer=${this._nameRenderer}></vaadin-grid-sort-column>
+        ${/*<vaadin-grid-sort-column .flexGrow=${0} .width=${"4rem"} path="file_type_S" header="Type">
+          </vaadin-grid-sort-column>*/null}
+        <vaadin-grid-sort-column .flexGrow=${0} .width=${"6rem"} path="classes_VS" header="Class"
+          .renderer=${this._classNameRenderer}></vaadin-grid-sort-column>
+        <vaadin-grid-sort-column .flexGrow=${0} .width=${"10rem"} path="categories_VS" header="Category"
+          .renderer=${this._categoryNameRenderer}></vaadin-grid-sort-column>
+        <vaadin-grid-sort-column .flexGrow=${0} .width=${"10rem"} path="modtime" header="Modified"
+          .renderer=${this._timeRenderer}></vaadin-grid-sort-column>
+        <vaadin-grid-sort-column .flexGrow=${0} .width=${"6rem"} path="file_size_R" header="Size"
+          .renderer=${this._sizeRenderer}></vaadin-grid-sort-column>
+        <vaadin-grid-sort-column .flexGrow=${0} .width=${"6rem"} path="file_length_R" header="Length"
+          .renderer=${this._lengthRenderer}>
+          </vaadin-grid-sort-column>
+        <vaadin-grid-sort-column .flexGrow=${0} .width=${"4rem"} path="file_sample_rate_R" header="Rate">
+          </vaadin-grid-sort-column>
+        <vaadin-grid-sort-column .flexGrow=${0} .width=${"4rem"} path="file_channel_count_R" header="Ch">
+          </vaadin-grid-sort-column>
+        <vaadin-grid-sort-column .flexGrow=${0} .width=${"4rem"} path="file_bit_depth_R" header="Bits">
+          </vaadin-grid-sort-column>
+        <vaadin-grid-sort-column .flexGrow=${0} .width=${"6rem"} path="brightness_R" header="Brightness"
+          .renderer=${this._percentageRenderer}></vaadin-grid-sort-column>
+        <vaadin-grid-sort-column .flexGrow=${0} .width=${"6rem"} path="noisiness_R" header="Noisiness"
+          .renderer=${this._percentageRenderer}></vaadin-grid-sort-column>
+        <vaadin-grid-sort-column .flexGrow=${0} .width=${"6rem"} path="harmonicity_R" header="Harmonicity"
+          .renderer=${this._percentageRenderer}></vaadin-grid-sort-column>
+      </vaadin-grid>
+    `;
+  }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'afec-file-list': FileList
+  }
+}
