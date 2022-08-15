@@ -12,8 +12,8 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@tauri-apps/api": "^1.0.2",
     "@adobe/lit-mobx": "^2.0.0",
+    "@tauri-apps/api": "^1.0.2",
     "@vaadin/button": "^23.1.1",
     "@vaadin/dialog": "^23.1.2",
     "@vaadin/grid": "^23.1.2",
@@ -24,6 +24,7 @@
     "@vaadin/split-layout": "^23.1.1",
     "@vaadin/text-field": "^23.1.2",
     "@vaadin/vertical-layout": "^23.1.1",
+    "d3": "^6.1.1",
     "lit": "^2.2.7",
     "mobx": "^6.6.1",
     "pretty-bytes": "^6.0.0",
@@ -31,6 +32,7 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^1.0.5",
+    "@types/d3": "^7.4.0",
     "typescript": "^4.6.4",
     "vite": "^3.0.0"
   }
