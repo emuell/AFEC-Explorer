@@ -1,13 +1,12 @@
 import { css, html, LitElement, PropertyValues } from 'lit'
-import { customElement, query, state } from 'lit/decorators.js'
+import { customElement, property, query, state } from 'lit/decorators.js'
 import { MobxLitElement } from '@adobe/lit-mobx';
 import * as mobx from 'mobx'
 
 import * as d3 from "d3";
 
 import { appState } from '../app-state';
-
-// import { MapResult } from '../models/map-result';
+import { MapResult } from '../models/map-result';
 
 import './error-message';
 import './spinner';
@@ -16,10 +15,9 @@ import './spinner';
 
 // A single point in the TSNE scatter plot
 
-interface PlotDataPoint { 
-  x: number; 
-  y: number;
-  index: number; 
+interface PlotDataPoint extends MapResult { 
+  index: number;
+  color: string; 
 };
 
 // -------------------------------------------------------------------------------------------------
@@ -29,8 +27,8 @@ interface PlotDataPoint {
 @customElement('afec-tsne-plot')
 export class TSNEPlot extends LitElement {
 
-  // @property() 
-  // private mapData: MapResult[] = [];  
+  @property({type: Array}) 
+  private data: MapResult[] = [];  
 
   // Elements
   @query("#container")
@@ -53,39 +51,8 @@ export class TSNEPlot extends LitElement {
   // Consts
   private readonly pointRadius = 1;
   private readonly selectedPointRadius = 1.25;
-
-  private readonly pointColor = '#3585ff'
   private readonly selectedPointColor = '#ff3585'
     
-  protected updated(changedProperties: PropertyValues): void {
-    super.updated(changedProperties);
-
-    // clear all previous content - if any
-    if (this._plotContainer && this._plotSvg && this._plotCanvas) {
-      this._plotContainer.removeChild(this._plotSvg.node()!);
-      this._plotSvg = undefined;
-     
-      this._plotContainer.removeChild(this._plotCanvas.node()!);
-      this._plotCanvas = undefined;
-    }
-
-    // remove existing resize observers
-    if (this._resizeObserver) {
-      this._resizeObserver.unobserve(this);
-      this._resizeObserver = undefined;
-    }
-
-    // render a new plot
-    let data: Array<PlotDataPoint> = [];
-    for (let i = 0; i < 10000; i++) {
-      const x = Math.floor(Math.random() * 999999) + 1;
-      const y = Math.floor(Math.random() * 999999) + 1;
-      data.push({x, y, index: i});
-    }
-
-    this.createPlot(data);
-  }
-
   private currentPlotRect(): {
     left: number,
     top: number,
@@ -126,7 +93,9 @@ export class TSNEPlot extends LitElement {
         .style('opacity', 0.8)
         .style('top', event.pageY + 5 + 'px')
         .style('left', event.pageX + 5 + 'px')
-        .html(`Point: ${closestPoint.index}`);
+        .html(`File: ${closestPoint.filename}<br>` + 
+          `Class: ${closestPoint.classes.join(",")}<br>` + 
+          `Categories: ${closestPoint.categories.join(",")}`);
     } else {
       // Hide the tooltip when there our mouse doesn't find nodeData
       d3.select(this._toolTip!)
@@ -176,7 +145,7 @@ export class TSNEPlot extends LitElement {
     data.forEach((point: PlotDataPoint) => {
       const isSelected = (this._selectedPointIndex == point.index);
       const radius = (isSelected ? this.selectedPointRadius : this.pointRadius) * k;
-      const color = isSelected ? this.selectedPointColor : this.pointColor;
+      const color = isSelected ? this.selectedPointColor : point.color;
       context.beginPath();
       context.fillStyle = color;
       const px = scaleX(point.x);
@@ -218,7 +187,7 @@ export class TSNEPlot extends LitElement {
 
     // Track and forward size changes to SVG and Canvas
     this._resizeObserver = new ResizeObserver(() => {
-      if (this._plotSvg && this._plotCanvas) {
+      if (this._plotSvg && this._plotCanvas && context) {
         // update canvas and svg size
         const newRect = this.currentPlotRect();
         this._plotSvg
@@ -277,6 +246,53 @@ export class TSNEPlot extends LitElement {
     this.drawPlotPoints(xScale, yScale, context, data);
   }
 
+  protected updated(changedProperties: PropertyValues): void {
+    super.updated(changedProperties);
+
+    // clear all previous content - if any
+    if (this._plotSvg && this._plotCanvas) {
+      this._plotSvg.remove();
+      this._plotSvg = undefined;
+      this._plotCanvas.remove();
+      this._plotCanvas = undefined;
+    }
+
+    // remove existing resize observers
+    if (this._resizeObserver) {
+      this._resizeObserver.unobserve(this);
+      this._resizeObserver = undefined;
+    }
+
+    // render a new plot
+    // TODO: this should be fetched from the database
+    const categoryNames = ["None", 
+      "Perc Bongos & Congas", "Perc Claps", "Perc Cymbal Crashes", "Perc Cymbal Rides", "Perc Hats & Shakers", 
+      "Perc Kicks", "Perc Metal Hits", "Perc Snares", "Perc Snips & Snaps", "Perc Toms", "Perc Vibraslap & Guiro", 
+      "Perc Vinyl Scratches", "Perc Wood Hits", "Perc Zaps & Blips", 
+      "Tone Bass & LowKeys", "Tone Blips & HighKeys", "Tone Leads & MidHiKeys", "Tone Pads & Textures", 
+      "Tone Stabs & Orch. Hits", "Tone Triangles & Bells", "Tone Voice & Acapella", 
+      "XFX Breaks & Smashes", "XFX Cracks & Rustle", "XFX Explosions & Shots", "XFX Nature & Athmospheric", 
+      "XFX Noise & Distortion", "XFX Sweeps & Lasers", "XFX Whooshes & Whips"];
+
+    const categoryColors = d3.scaleSequential()
+      .domain([0, categoryNames.length])
+      .interpolator(d3.interpolateRainbow);
+    
+    const data: Array<PlotDataPoint> = this.data.map((v, i) => {
+      let color: string = "#fff";
+      const mainCategory = v.categories.length ? v.categories[0] : "";
+      if (mainCategory !== "") {
+        let index = categoryNames.indexOf(mainCategory);
+        if (index !== -1) {
+          color = categoryColors(index);
+        }
+      }
+      return {...v, index: i, color: color}
+    });
+
+    this.createPlot(data);
+  }
+
   static styles = css`
     #tooltip {
 		  position: absolute;        
@@ -309,8 +325,8 @@ export class FileMap extends MobxLitElement {
   @state()
   private _fetchError: string = "";
 
-  // @state() 
-  // private _mapEntries: MapResult[] = [];  
+  @state() 
+  private _mapEntries: MapResult[] = [];  
 
   constructor() {
     super();
@@ -324,25 +340,20 @@ export class FileMap extends MobxLitElement {
   }
 
   private _fetchMap() {
-    /*if (! appState.databasePath) {
+    if (! appState.databasePath) {
       this._fetchError = "No database selected";
       this._mapEntries = [];
       return;
     }
-    appState.fetchMap()
+    appState.generateMap()
       .then((entries) => {
-        // assign and rebuild graph
-        this._mapEntries = [];
-        if (this._canvas) {
-          this._canvas.clearCache();
-        }
-        // reset fetch errors - if any
+        this._mapEntries = entries;
         this._fetchError = "";
       })
       .catch((error) => {
         this._fetchError = error.message || String(error);
         this._mapEntries = [];
-      })*/
+      })
   }
 
   static styles = css`
@@ -365,6 +376,9 @@ export class FileMap extends MobxLitElement {
       align-items: center;
       justify-content: center;
     }
+    #error {
+      height: 100%; 
+    }
     #graph {
       flex: 1 1 auto;
     }
@@ -377,14 +391,14 @@ export class FileMap extends MobxLitElement {
       </vaadin-horizontal-layout>
     `;
     // error
-    if (this._fetchError && appState.isGeneratingMap === 0) {
+    if (this._fetchError && appState.isGeneratingMap === 0 && appState.isLoadingFiles == 0) {
       let errorMessage = this._fetchError;
       if (appState.databasePath) {
         errorMessage = "Failed to calculate t-SNE map: " + errorMessage;
       }
       return html`
         ${header}
-        <afec-error-message 
+        <afec-error-message id="error"
           type=${appState.databasePath ? "error" : "info"}
           message=${errorMessage}>
         </afec-error-message>
@@ -402,7 +416,7 @@ export class FileMap extends MobxLitElement {
     // map
     return html`
       ${header}
-      <afec-tsne-plot id="graph"></afec-tsne-plot>
+      <afec-tsne-plot id="graph" .data=${this._mapEntries}></afec-tsne-plot>
     `;
   }
 }

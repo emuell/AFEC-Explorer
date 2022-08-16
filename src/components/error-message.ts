@@ -24,7 +24,6 @@ export class ErrorMessage extends LitElement {
       height: 100%; 
       align-items: center; 
       justify-content: center; 
-      margin-bottom: 25%;
     }
   `;
 

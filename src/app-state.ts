@@ -1,7 +1,11 @@
 import * as mobx from 'mobx';
 
+import { invoke } from '@tauri-apps/api/tauri'
+
 import { Database } from './controllers/database';
+
 import { File } from './models/file';
+import { MapResult } from './models/map-result';
 
 // -------------------------------------------------------------------------------------------------
 
@@ -60,6 +64,18 @@ class AppState {
     }
     finally {
       --this.isLoadingFiles; 
+    }
+  }
+
+  // generatre plot for the given database
+  @mobx.action
+  async generateMap(): Promise<MapResult[]> {
+    ++this.isGeneratingMap;
+    try {
+      return await invoke<MapResult[]>('create_plot', { dbPath: this.databasePath });
+    }
+    finally {
+      --this.isGeneratingMap; 
     }
   }
 
