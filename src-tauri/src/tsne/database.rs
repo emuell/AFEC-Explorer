@@ -9,51 +9,46 @@ pub struct TsneFeatureRow {
     pub categories: Vec<String>,
 }
 
-pub fn get_tsne_data(path: String) -> Result<Vec<TsneFeatureRow>, sqlite::Error> {
+pub fn get_tsne_data(path: String) -> Result<Vec<TsneFeatureRow>, Box<dyn std::error::Error>> {
     let connection = Connection::open(&path)?;
-    let columns = vec![
+    let column_names = [
         "filename",
         "classes_VS",
         "categories_VS",
         "class_signature_VR",
         "category_signature_VR",
     ];
-    let sql =
-        "SELECT ".to_string() + &columns.join(",") + " FROM assets WHERE status=\"succeeded\"";
+    let sql = format!(
+        "SELECT {} FROM assets WHERE status=\"succeeded\"",
+        &column_names.join(",")
+    );
     let statement = connection.prepare(&sql)?;
-
-    let mut column_names: Vec<String> = Vec::new();
-    for name in statement.column_names() {
-        column_names.push(name.to_string());
-    }
+    let column_count = statement.column_count();
+    assert_eq!(column_names.len(), column_count);
 
     let mut cursor = statement.into_cursor();
     let mut result: Vec<TsneFeatureRow> = Vec::new();
 
     while let Some(row) = cursor.next()? {
         let mut feature_row = TsneFeatureRow::default();
-        for (i, name) in column_names.iter().enumerate() {
-            let value = row.get(i).unwrap();
-            let value_string = value.as_string().unwrap();
-            match name.as_str() {
+        for i in 0..column_count {
+            let column_name = *column_names.get(i).unwrap();
+            let value = row
+                .get(i)
+                .ok_or_else(|| format!("Failed to fetch column '{}' value", column_name))?;
+            let value_string = value.as_string().ok_or_else(|| {
+                format!("Failed to convert column '{}' string value", column_name)
+            })?;
+            match column_name {
                 "filename" => feature_row.filename = value_string.to_string(),
-                "classes_VS" => feature_row.classes = serde_json::from_str(value_string).unwrap(),
-                "categories_VS" => {
-                    feature_row.categories = serde_json::from_str(value_string).unwrap()
-                }
-                "class_signature_VR" => {
-                    let mut array: Vec<f32> = serde_json::from_str(value_string).unwrap();
+                "classes_VS" => feature_row.classes = serde_json::from_str(value_string)?,
+                "categories_VS" => feature_row.categories = serde_json::from_str(value_string)?,
+                "class_signature_VR" | "category_signature_VR" => {
+                    let mut array: Vec<f32> = serde_json::from_str(value_string)?;
                     feature_row.data.append(&mut array);
                 }
-                "category_signature_VR" => {
-                    let mut array: Vec<f32> = serde_json::from_str(value_string).unwrap();
-                    feature_row.data.append(&mut array);
-                }
-                &_ => {
-                    return Err(sqlite::Error {
-                        code: None,
-                        message: Some(format!("Unexpected column name {}", name)),
-                    });
+                _ => {
+                    return Err(format!("Unexpected column name {}", column_name).into());
                 }
             };
         }
