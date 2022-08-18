@@ -5,10 +5,9 @@ This repository contains an experimental GUI for [AFEC](https://github.com/emuel
 
 ## Features
 
-Shows high-level features of an afec database in a table.
-
-TODO/WIP: Clicking on an entry in the table shows the sample waveform and plays the audio file.
-TODO/WIP: Shows a 2d t-SNE cluster from the afec high-level classification data in sync with the table.
+- Shows high-level features of an afec database in a table.
+- Shows a 2d t-SNE cluster from the afec high-level classification data.
+- TODO/WIP: Clicking on a file in the table or map plays the audio file and shows the sample waveform.
 
 
 ## Development
