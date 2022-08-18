@@ -16,16 +16,19 @@ export class Database {
 
     this._db = await SQLite.open(filename);
 
-    const classNames = await this._db.select(
-      'SELECT classes FROM classes WHERE classifier="Classifiers"') as Array<Object>;
-    if (!classNames || !classNames.length) {
+    const classNameResult = await this._db.select(
+      'SELECT classes FROM classes WHERE classifier="Classifiers"') as Array<any>;
+    if (!classNameResult || !classNameResult.length) {
       throw new Error("Failed to read 'classes' from database. Is this a high-level AFEC db?")
     }
-    const categoryNames = await this._db.select(
-      'SELECT classes FROM classes WHERE classifier="OneShot-Categories"') as Array<string>;
-    if (!categoryNames || !categoryNames.length) {
+    this._classNames = JSON.parse(classNameResult[0]["classes"]) as Array<string>;
+
+    const categoryNameResult = await this._db.select(
+      'SELECT classes FROM classes WHERE classifier="OneShot-Categories"') as Array<any>;
+    if (!categoryNameResult || !categoryNameResult.length) {
       throw new Error("Failed to read 'categories' from database. Is this a high-level AFEC db?")
     }
+    this._categoryNames = JSON.parse(categoryNameResult[0]["classes"]) as Array<string>;
   }
 
   // Close a previously opened database 
@@ -33,6 +36,14 @@ export class Database {
     if (this._db) {
       await this._db.close();
     }
+  }
+
+  // class/category name access
+  get classNames(): string[] {
+    return this._classNames;
+  }
+  get categoryNames(): string[] {
+    return this._categoryNames;
   }
 
   // Fetch all suceeded files from database
@@ -81,4 +92,6 @@ export class Database {
   }
     
   private _db?: SQLite = undefined;
+  private _classNames: string[] = [];
+  private _categoryNames: string[] = [];
 }

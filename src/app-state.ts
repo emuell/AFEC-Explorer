@@ -1,11 +1,9 @@
 import * as mobx from 'mobx';
 
-import { invoke } from '@tauri-apps/api/tauri'
-
 import { Database } from './controllers/database';
 
 import { File } from './models/file';
-import { MapResult } from './models/map-result';
+import { createPlot, PlotEntry } from './controllers/backend/plot';
 
 // -------------------------------------------------------------------------------------------------
 
@@ -15,21 +13,31 @@ import { MapResult } from './models/map-result';
 
 class AppState {
 
-  // repository setup
+  // database
   @mobx.observable
   databasePath: string = "";
-
+  
   @mobx.observable
   databaseError: string = "";
-
+  
   @mobx.observable
   isLoadingDatabase: number = 0;
 
   @mobx.observable
   isLoadingFiles: number = 0;
 
+  // map generation
   @mobx.observable
   isGeneratingMap: number = 0;
+  
+  @mobx.observable
+  mapEpochs: number = 100;
+
+  @mobx.observable
+  mapPerplexity: number = 10;
+
+  @mobx.observable
+  mapTheta: number = 0.5;
 
   // initialize app state
   constructor() {
@@ -55,6 +63,16 @@ class AppState {
     }
   }
 
+  // access class names from the currently database
+  get databaseClassNames(): string[]{
+    return this._database.classNames;
+  } 
+
+  // access category names from the currently database
+  get databaseCategoryNames(): string[]{
+    return this._database.categoryNames;
+  } 
+
   // fetch files at \param rootPath
   @mobx.action
   async fetchFiles(rootPath: string): Promise<File[]> {
@@ -69,10 +87,11 @@ class AppState {
 
   // generatre plot for the given database
   @mobx.action
-  async generateMap(): Promise<MapResult[]> {
+  async generateMap(): Promise<PlotEntry[]> {
+    
     ++this.isGeneratingMap;
     try {
-      return await invoke<MapResult[]>('create_plot', { dbPath: this.databasePath });
+      return await createPlot(this.databasePath, this.mapPerplexity, this.mapTheta, this.mapEpochs);
     }
     finally {
       --this.isGeneratingMap; 

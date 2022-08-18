@@ -6,7 +6,11 @@ import * as mobx from 'mobx'
 import * as d3 from "d3";
 
 import { appState } from '../app-state';
-import { MapResult } from '../models/map-result';
+import { PlotEntry } from '../controllers/backend/plot';
+
+import '@vaadin/integer-field';
+import '@vaadin/number-field';
+import '@vaadin/horizontal-layout';
 
 import './error-message';
 import './spinner';
@@ -15,7 +19,7 @@ import './spinner';
 
 // A single point in the TSNE scatter plot
 
-interface PlotDataPoint extends MapResult { 
+interface PlotDataPoint extends PlotEntry { 
   index: number;
   color: string; 
 };
@@ -28,7 +32,7 @@ interface PlotDataPoint extends MapResult {
 export class TSNEPlot extends LitElement {
 
   @property({type: Array}) 
-  private data: MapResult[] = [];  
+  private data: PlotEntry[] = [];  
 
   // Elements
   @query("#container")
@@ -207,11 +211,11 @@ export class TSNEPlot extends LitElement {
 
     // Init Scales
     const xScale = d3.scaleLinear()
-      .domain([0, d3.max(data, (d: any) => d.x)])
+      .domain([d3.min(data, (d: any) => d.x), d3.max(data, (d: any) => d.x)])
       .range([0, initialRect.innerWidth])
       .nice();
     const yScale = d3.scaleLinear()
-      .domain([0, d3.max(data, (d: any) => d.y)])
+      .domain([d3.min(data, (d: any) => d.y), d3.max(data, (d: any) => d.y)])
       .range([initialRect.innerHeight, 0])
       .nice();
   
@@ -264,19 +268,8 @@ export class TSNEPlot extends LitElement {
     }
 
     // render a new plot
-    // TODO: this should be fetched from the database
-    const categoryNames = ["None", 
-      "Perc Bongos & Congas", "Perc Claps", "Perc Cymbal Crashes", "Perc Cymbal Rides", "Perc Hats & Shakers", 
-      "Perc Kicks", "Perc Metal Hits", "Perc Snares", "Perc Snips & Snaps", "Perc Toms", "Perc Vibraslap & Guiro", 
-      "Perc Vinyl Scratches", "Perc Wood Hits", "Perc Zaps & Blips", 
-      "Tone Bass & LowKeys", "Tone Blips & HighKeys", "Tone Leads & MidHiKeys", "Tone Pads & Textures", 
-      "Tone Stabs & Orch. Hits", "Tone Triangles & Bells", "Tone Voice & Acapella", 
-      "XFX Breaks & Smashes", "XFX Cracks & Rustle", "XFX Explosions & Shots", "XFX Nature & Athmospheric", 
-      "XFX Noise & Distortion", "XFX Sweeps & Lasers", "XFX Whooshes & Whips"];
-
-    const categoryColors = d3.scaleSequential()
-      .domain([0, categoryNames.length])
-      .interpolator(d3.interpolateRainbow);
+    const categoryNames = appState.databaseCategoryNames;
+    const colorScheme = d3.schemeCategory10;
     
     const data: Array<PlotDataPoint> = this.data.map((v, i) => {
       let color: string = "#fff";
@@ -284,7 +277,7 @@ export class TSNEPlot extends LitElement {
       if (mainCategory !== "") {
         let index = categoryNames.indexOf(mainCategory);
         if (index !== -1) {
-          color = categoryColors(index);
+          color = colorScheme[Math.trunc(index % colorScheme.length - 1)];
         }
       }
       return {...v, index: i, color: color}
@@ -326,16 +319,23 @@ export class FileMap extends MobxLitElement {
   private _fetchError: string = "";
 
   @state() 
-  private _mapEntries: MapResult[] = [];  
+  private _mapEntries: PlotEntry[] = [];  
 
   constructor() {
     super();
 
-    // fetch new map on database path changes, snapshot or root dir changes
+    // fetch new map on database path changes
     mobx.reaction(
       () => appState.databasePath,
       () => this._fetchMap(),
       { fireImmediately: true }
+    );
+
+    // update map on map parameter changes
+    mobx.reaction(
+      () => [appState.mapEpochs, appState.mapPerplexity, appState.mapTheta],
+      () => this._fetchMap(),
+      { fireImmediately: false, delay: 1000 }
     );
   }
 
@@ -370,7 +370,15 @@ export class FileMap extends MobxLitElement {
       flex: 1;
       margin: 0px 10px;
       padding: 4px 0px;
-     }
+    }
+    #header .control {
+      margin-right: 8px;
+    }
+    #header .label {
+      margin-right: 4px;
+      color: var(--lumo-tertiary-text-color);
+      font-size: var(--lumo-font-size-s);
+    }
     #loading {
       height: 100%; 
       align-items: center;
@@ -388,6 +396,42 @@ export class FileMap extends MobxLitElement {
     const header = html`
       <vaadin-horizontal-layout id="header">
         <strong id="title">Map</strong>
+        <span class="label">Perplexity:</span>
+        <vaadin-integer-field
+          theme="small" 
+          class="control"
+          .min=${5}
+          .max=${50}
+          .value=${String(appState.mapPerplexity)} 
+          .disabled=${appState.isGeneratingMap > 0} 
+          @change=${(event: CustomEvent) => {
+            appState.mapPerplexity = Number((event.target as HTMLInputElement).value); 
+          }}>
+        </vaadin-integer-field>
+        <span class="label">Theta:</span>
+        <vaadin-number-field
+          theme="small" 
+          class="control"
+          .min=${0.01}
+          .max=${1}
+          .value=${String(appState.mapTheta)} 
+          .disabled=${appState.isGeneratingMap > 0} 
+          @change=${(event: CustomEvent) => {
+            appState.mapTheta = Number((event.target as HTMLInputElement).value); 
+          }}>
+        </vaadin-number-field>
+        <span class="label">Epochs:</span>
+        <vaadin-integer-field
+          theme="small" 
+          class="control"
+          .min=${1}
+          .max=${10000}
+          .value=${String(appState.mapEpochs)} 
+          .disabled=${appState.isGeneratingMap > 0} 
+          @change=${(event: CustomEvent) => {
+            appState.mapEpochs = Number((event.target as HTMLInputElement).value); 
+          }}>
+        </vaadin-integer-field>
       </vaadin-horizontal-layout>
     `;
     // error
