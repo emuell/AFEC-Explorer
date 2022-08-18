@@ -9,7 +9,7 @@ pub struct TsneFeatureRow {
     pub categories: Vec<String>,
 }
 
-pub fn get_tsne_data(path: String) -> Result<Vec<TsneFeatureRow>, Box<dyn std::error::Error>> {
+pub fn get_tsne_features(path: String) -> Result<Vec<TsneFeatureRow>, Box<dyn std::error::Error>> {
     let connection = Connection::open(&path)?;
     let column_names = [
         "filename",

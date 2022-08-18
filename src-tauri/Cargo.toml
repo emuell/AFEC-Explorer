@@ -21,6 +21,7 @@ tauri = { version = "1.0.5", features = ["api-all"] }
 tauri-plugin-window-state = { version = "0.1" }
 sqlite = "0.26.0"
 bhtsne = "0.5.1"
+rstats = "1.2.12"
 
 [dependencies.tauri-plugin-sqlite]
 git = "https://github.com/lzdyes/tauri-plugin-sqlite"
