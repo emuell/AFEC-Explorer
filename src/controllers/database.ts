@@ -47,35 +47,46 @@ export class Database {
   }
 
   // Fetch all suceeded files from database
-  async fetchFiles(rootPath: string): Promise<File[]> {
+  async fetchFiles(searchString: string): Promise<File[]> {
     if (! this._db) {
       throw new Error("Database is closed");
     }
-  
-    let filesResult: Array<any>;
-    if (rootPath && rootPath != "/") {
-      let validatedRootPath = rootPath;
-      if (!validatedRootPath.startsWith("/")) {
-        validatedRootPath = "/" + validatedRootPath;
-      }
-      if (!validatedRootPath.endsWith("/")) {
-        validatedRootPath = validatedRootPath + "/";
-      }
-      filesResult = await this._db.select(
-        'SELECT * FROM assets WHERE status="succeeded" AND ' + 
-          '(filename LIKE ? OR filename LIKE ?)', [`.${validatedRootPath}%`, `${validatedRootPath}%`]);
-    } 
-    else {
-      filesResult = await this._db.select(
-        'SELECT * FROM assets WHERE status="succeeded"');
-    }
  
+    const searchWords = searchString.split(' ').filter(v => v.length > 0);
+
+    let sql = 'SELECT * FROM assets WHERE status="succeeded"';
+    let values: any[] = []; 
+    
+    // add filename matches, if may
+    if (searchWords.length) {
+      sql += " AND " + searchWords
+        .map(_ => `filename LIKE ?`)
+        .join(" AND ");
+      values = searchWords.map(v => `%${v}%`);
+    }
+
+    // fetch results in batches to avoid allocating too much memory in the IPC conversion
+    const batchSize = 1000;
+    let batchOffset = 0;
+
+    let filesResult: any[] | undefined = undefined;
+    do {
+      const batchResult = await this._db.select<any>(
+        `${sql} LIMIT ${batchSize} OFFSET ${batchOffset}`, values);
+      if (! batchResult || ! batchResult.length) {
+        break;
+      }
+      filesResult = filesResult || [];
+      filesResult.push(...batchResult)
+      batchOffset += batchSize;
+    } while (true)
+    
     if (!filesResult) {
       throw new Error("Failed to read 'files' from database. Is this a high-level AFEC db?")
     }
 
-    // convert JSON strings, if needed
-    const files = filesResult.map(f => {
+    // convert JSON data, if needed
+    filesResult.forEach(f => {
       for (const key of Object.keys(f)) {
         if (key.endsWith("_VR") || key.endsWith("_VVR") || 
             key.endsWith("_VS") ||key.endsWith("_VVS")) {
@@ -85,10 +96,9 @@ export class Database {
           }
         }
       }
-      return f;
-    }) as any as File[];
+    });
 
-    return files;
+    return filesResult as File[];
   }
     
   private _db?: SQLite = undefined;

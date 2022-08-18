@@ -29,7 +29,7 @@ import '@vaadin/notification';
 export class FileList extends MobxLitElement {
   
   @mobx.observable
-  private _rootPath: string = "";
+  private _searchString: string = "";
   
   // NB: not a state or observable: data-provider update is manually triggered 
   private _files: File[] = [];
@@ -51,33 +51,22 @@ export class FileList extends MobxLitElement {
 
     // fetch file list on repo path, snapshot or root dir changes
     mobx.reaction(
-      () => appState.databasePath + ":" + this._rootPath,
+      () => appState.databasePath,
       () => this._fetchFiles(),
       { fireImmediately: true }
     );
+    mobx.reaction(
+      () => this._searchString,
+      () => this._fetchFiles(),
+      { fireImmediately: false, delay: 1500 }
+    );
 
-    // bind context for renderers
+    // bind context for renderers which are using this
     this._actionRenderer = this._actionRenderer.bind(this);
     // bind context for data provider
     this._dataProvider = this._dataProvider.bind(this);
   }
 
-  @mobx.action
-  private _setRootPath(newPath: string): void {
-    this._rootPath = newPath;
-  }
-
-  private _parentRootPath(path: string): string | undefined {
-    let rootPath = path.trim();
-    if (rootPath && rootPath != "/") {
-      if (rootPath.endsWith("/")) {
-        rootPath = rootPath.substring(0, rootPath.length - 1);
-      }
-      return rootPath.substring(0, rootPath.lastIndexOf("/")) || "/";
-    }
-    return undefined;
-  }
-  
   private _playFile(_file: File) {
     // TODO
   }
@@ -89,9 +78,7 @@ export class FileList extends MobxLitElement {
       this._files = [];
       return;
     }
-    // memorize rootpath we're fetching files for
-    const rootPath = this._rootPath;
-    appState.fetchFiles(rootPath)
+    appState.fetchFiles(this._searchString)
       .then((files) => {
         // assign and request data provider update
         this._selectedFiles = [];
@@ -334,11 +321,11 @@ export class FileList extends MobxLitElement {
       margin: 0px 10px;
       padding: 4px 0px;
      }
-    #header #rootPath {
-      flex: 1;
+    #header #searchString {
       padding: unset;
-      padding-left: 4px;
-      padding-right: 4px;
+      margin-left: auto;
+      margin-right: 4px;
+      width: 50%;
     }
     #loading {
       height: 100%; 
@@ -367,27 +354,19 @@ export class FileList extends MobxLitElement {
     const header = html`
       <vaadin-horizontal-layout id="header">
         <strong id="title">Files</strong>
-        <vaadin-button id="rootPathButton" theme="icon small secondary" 
-            @click=${() => this._setRootPath(this._parentRootPath(this._rootPath) || "/")}
-            .disabled=${! this._parentRootPath(this._rootPath)}
-            .hidden=${! appState.databasePath}>
-          ${appState.isLoadingFiles 
-              ? html`<afec-spinner size="16px" style="margin: 0 2px;"></afec-spinner>` 
-              : html`<vaadin-icon icon="vaadin:level-up"></vaadin-icon>`}
-        </vaadin-button>
         <vaadin-text-field 
-          id="rootPath"
+          id="searchString"
           theme="small"
-          placeholder="/"
-          value=${this._rootPath}
+          placeholder="Search"
+          clearButtonVisible
+          value=${this._searchString}
           .disabled=${appState.isLoadingFiles > 0} 
           .hidden=${! appState.databasePath}
-          @change=${(event: CustomEvent) => {
-            this._setRootPath((event.target as HTMLInputElement).value); 
-          }} 
+          @input=${mobx.action((event: CustomEvent) => {
+            this._searchString = (event.target as HTMLInputElement).value; 
+          })} 
           clear-button-visible
         >
-          <vaadin-icon slot="prefix" icon="vaadin:folder"></vaadin-icon>
         </vaadin-text-field>
       </vaadin-horizontal-layout>
     `;

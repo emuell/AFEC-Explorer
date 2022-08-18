@@ -435,7 +435,7 @@ export class FileMap extends MobxLitElement {
       </vaadin-horizontal-layout>
     `;
     // error
-    if (this._fetchError && appState.isGeneratingMap === 0 && appState.isLoadingFiles == 0) {
+    if (this._fetchError && appState.isGeneratingMap === 0) {
       let errorMessage = this._fetchError;
       if (appState.databasePath) {
         errorMessage = "Failed to calculate t-SNE map: " + errorMessage;
@@ -449,7 +449,7 @@ export class FileMap extends MobxLitElement {
       `;
     }
     // loading
-    if (appState.isGeneratingMap > 0 || appState.isLoadingFiles > 0) {
+    if (appState.isGeneratingMap > 0 || appState.isLoadingDatabase > 0) {
       return html`
         ${header}
         <vaadin-horizontal-layout id="loading">
