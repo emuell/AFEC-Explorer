@@ -1,15 +1,17 @@
-use serde_json;
 use sqlite::Connection;
+use std::collections::VecDeque;
 
 #[derive(Debug, Default)]
 pub struct TsneFeatureRow {
-    pub filename: String,
+    pub filename: Box<str>,
     pub data: Vec<f32>,
-    pub classes: Vec<String>,
-    pub categories: Vec<String>,
+    pub classes: Vec<Box<str>>,
+    pub categories: Vec<Box<str>>,
 }
 
-pub fn get_tsne_features(path: String) -> Result<Vec<TsneFeatureRow>, Box<dyn std::error::Error>> {
+pub fn get_tsne_features(
+    path: String,
+) -> Result<VecDeque<TsneFeatureRow>, Box<dyn std::error::Error>> {
     let connection = Connection::open(&path)?;
     let column_names = [
         "filename",
@@ -27,7 +29,7 @@ pub fn get_tsne_features(path: String) -> Result<Vec<TsneFeatureRow>, Box<dyn st
     assert_eq!(column_names.len(), column_count);
 
     let mut cursor = statement.into_cursor();
-    let mut result: Vec<TsneFeatureRow> = Vec::new();
+    let mut result = VecDeque::new();
 
     while let Some(row) = cursor.next()? {
         let mut feature_row = TsneFeatureRow::default();
@@ -40,7 +42,7 @@ pub fn get_tsne_features(path: String) -> Result<Vec<TsneFeatureRow>, Box<dyn st
                 format!("Failed to convert column '{}' string value", column_name)
             })?;
             match column_name {
-                "filename" => feature_row.filename = value_string.to_string(),
+                "filename" => feature_row.filename = Box::from(value_string),
                 "classes_VS" => feature_row.classes = serde_json::from_str(value_string)?,
                 "categories_VS" => feature_row.categories = serde_json::from_str(value_string)?,
                 "class_signature_VR" | "category_signature_VR" => {
@@ -52,7 +54,7 @@ pub fn get_tsne_features(path: String) -> Result<Vec<TsneFeatureRow>, Box<dyn st
                 }
             };
         }
-        result.push(feature_row);
+        result.push_back(feature_row);
     }
 
     Ok(result)

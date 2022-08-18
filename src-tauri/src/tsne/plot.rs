@@ -4,11 +4,11 @@ use rstats::Vecg;
 
 #[derive(serde::Serialize, Debug, Default)]
 pub struct PlotEntry {
-    filename: String,
+    filename: Box<str>,
     x: f32,
     y: f32,
-    categories: Vec<String>,
-    classes: Vec<String>,
+    categories: Vec<Box<str>>,
+    classes: Vec<Box<str>>,
 }
 
 #[tauri::command]
@@ -19,27 +19,27 @@ pub async fn create_plot(
     epochs: usize,
 ) -> Result<Vec<PlotEntry>, String> {
     // validate args
-    if theta <= 0.0 || theta > 1.0 {
+    if !(0.0..1.0).contains(&theta) {
         return Err(format!(
-            "Invalid TSNE arg: 'theta' must be in (0, 1]): {}",
+            "Invalid TSNE arg: 'theta' must be in (0, 1)): {}",
             theta
         ));
     }
-    if perplexity < 5.0 || perplexity > 50.0 {
+    if !(5.0..=50.0).contains(&perplexity) {
         return Err(format!(
             "Invalid TSNE arg: 'perplexity' must be in [5, 50]): {}",
             perplexity
         ));
     }
-    if epochs <= 0 {
+    if !(1..=10_000).contains(&epochs) {
         return Err(format!(
-            "Invalid TSNE arg: 'epochs' must be > 0: {}",
+            "Invalid TSNE arg: 'epochs' must be in [1, 10000] {}",
             epochs
         ));
     }
     // read database input
-    let rows = database::get_tsne_features(db_path).map_err(|e| e.to_string())?;
-    if rows.len() == 0 {
+    let mut rows = database::get_tsne_features(db_path).map_err(|e| e.to_string())?;
+    if rows.is_empty() {
         return Ok(vec![]);
     }
 
@@ -68,18 +68,17 @@ pub async fn create_plot(
     assert_eq!(points.len(), rows.len());
 
     // convert results
-    let mut vec = Vec::new();
-    let mut row_index = 0;
+    let mut vec = Vec::with_capacity(rows.len());
     for point in points {
-        let row = rows.get(row_index).unwrap();
+        // pop row entry, so the compiler can reuse/move existing row values
+        let row = rows.pop_front().unwrap();
         vec.push(PlotEntry {
-            filename: row.filename.clone(),
+            filename: row.filename,
             x: point[0],
             y: point[1],
-            categories: row.categories.clone(),
-            classes: row.classes.clone(),
+            categories: row.categories,
+            classes: row.classes,
         });
-        row_index = row_index + 1;
     }
 
     Ok(vec)
