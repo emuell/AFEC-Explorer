@@ -1,6 +1,6 @@
 import SQLite from 'tauri-plugin-sqlite-api'
 
-import { File } from '../models/file';
+import { File, fileColumnNames } from '../models/file';
 
 // -------------------------------------------------------------------------------------------------
 
@@ -54,7 +54,7 @@ export class Database {
  
     const searchWords = searchString.split(' ').filter(v => v.length > 0);
 
-    let sql = 'SELECT * FROM assets WHERE status="succeeded"';
+    let sql = `SELECT ${fileColumnNames.join(",")} FROM assets WHERE status="succeeded"`;
     let values: any[] = []; 
     
     // add filename matches, if may
@@ -66,7 +66,7 @@ export class Database {
     }
 
     // fetch results in batches to avoid allocating too much memory in the IPC conversion
-    const batchSize = 1000;
+    const batchSize = 5000;
     let batchOffset = 0;
 
     let filesResult: any[] | undefined = undefined;
