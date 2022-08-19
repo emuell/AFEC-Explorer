@@ -55,6 +55,11 @@ pub async fn create_plot(
     // let metric = <&[f32]>::cityblockd::<f32>;
     let metric = <&[f32]>::vdistsq::<f32>;
 
+    // avoid that bhtsne panics: see check_perplexity in mod.rs
+    if samples.len() as f32 - 1.0 < 3.0 * perplexity {
+        return Err("Can't generate map: too litte samples".to_string());
+    }
+
     let mut tsne = bhtsne::tSNE::new(&samples);
     tsne.embedding_dim(NO_DIMS)
         .perplexity(perplexity)
