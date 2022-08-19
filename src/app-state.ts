@@ -3,7 +3,9 @@ import * as mobx from 'mobx';
 import { Database } from './controllers/database';
 
 import { File } from './models/file';
+
 import { createPlot, PlotEntry } from './controllers/backend/plot';
+import { isRunningInTauriDev } from './controllers/tools';
 
 // -------------------------------------------------------------------------------------------------
 
@@ -31,7 +33,7 @@ class AppState {
   isGeneratingMap: number = 0;
   
   @mobx.observable
-  mapEpochs: number = 100;
+  mapEpochs: number = isRunningInTauriDev() ? 100 : 1000;
 
   @mobx.observable
   mapPerplexity: number = 10;

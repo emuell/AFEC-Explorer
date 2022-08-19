@@ -4,8 +4,6 @@ import { MobxLitElement } from '@adobe/lit-mobx';
 
 import { appState } from '../app-state';
 
-import eye from '../assets/images/eye.png'
-
 import '@vaadin/horizontal-layout';
 import '@vaadin/button';
 
@@ -23,22 +21,14 @@ export class AppHeader extends MobxLitElement {
     #header {
       align-items: center;
     }
-    #header #eye {
-      margin-left: 12px;
-      width: auto; 
-      height: var(--lumo-font-size-xxl);
-    }
-    #header #logo {
+    #header #databaseButton {
       margin-left: 8px;
-      margin-right: 12px;
-      width: auto; 
-      height: var(--lumo-font-size-xl);
     }
     #header #databasePath {
-      margin-left: 12px;
-      color: var(--lumo-tint-50pct);
-      margin-top: 4px;
+      margin-left: 8px;
       margin-right: 12px;
+      color: var(--lumo-tint-50pct);
+      font-size: smaller;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
@@ -55,9 +45,9 @@ export class AppHeader extends MobxLitElement {
     
     return html`
       <vaadin-horizontal-layout id="header">
-        <img src=${eye} id="eye" />
-        <div id="logo">AFEC</div>
-        <vaadin-button theme="primary" 
+        <vaadin-button 
+          id="databaseButton" 
+          theme="primary" 
           @click=${() => {
             if (this.openDatabaseClick) { 
               this.openDatabaseClick(); 

@@ -49,8 +49,8 @@ export class App extends MobxLitElement {
        width: 100vw; 
        height: 100%;
     }
-    #errorMessage {
-      height: 50%;
+    #error {
+      height: 100%;
     }
     #footer {
       height: auto;
@@ -68,7 +68,7 @@ export class App extends MobxLitElement {
       min-height: 25%;
     }
     #footer {
-      height: 44px;
+      height: 38px;
     }
   `;
 
@@ -83,10 +83,11 @@ export class App extends MobxLitElement {
           <afec-app-header id="header" 
             .openDatabaseClick=${this._openDatabaseClick}>
           </afec-app-header>
-          <afec-error-message id="errorMessage"
+          <afec-error-message id="error"
               type=${appState.databaseError ? "error" : "info"} 
               message=${errorMessage}>
           </afec-error-message>
+          <afec-app-footer id="footer"></afec-app-footer>
         </vaadin-vertical-layout>
       `;
     }

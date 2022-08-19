@@ -327,6 +327,9 @@ export class FileList extends MobxLitElement {
       margin-right: 4px;
       width: 50%;
     }
+    #error {
+      height: 75%;
+    }
     #loading {
       height: 100%; 
       align-items: center;
@@ -353,7 +356,7 @@ export class FileList extends MobxLitElement {
   render() {
     const header = html`
       <vaadin-horizontal-layout id="header">
-        <strong id="title">Files</strong>
+        <strong id="title">FILES</strong>
         <vaadin-text-field 
           id="searchString"
           theme="small"
@@ -378,7 +381,8 @@ export class FileList extends MobxLitElement {
       }
       return html`
         ${header}
-        <afec-error-message 
+        <afec-error-message
+          id="error" 
           type=${appState.databasePath ? "error" : "info"}
           message=${errorMessage}>
         </afec-error-message>

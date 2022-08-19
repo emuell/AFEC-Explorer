@@ -372,7 +372,9 @@ export class FileMap extends MobxLitElement {
       padding: 4px 0px;
     }
     #header .control {
-      margin-right: 8px;
+      margin-right: 12px;
+      padding: unset;
+      width: 6rem;
     }
     #header .label {
       margin-right: 4px;
@@ -385,7 +387,7 @@ export class FileMap extends MobxLitElement {
       justify-content: center;
     }
     #error {
-      height: 100%; 
+      height: 75%; 
     }
     #graph {
       flex: 1 1 auto;
@@ -395,37 +397,43 @@ export class FileMap extends MobxLitElement {
   render() {
     const header = html`
       <vaadin-horizontal-layout id="header">
-        <strong id="title">Map</strong>
-        <span class="label">Perplexity:</span>
+        <strong id="title">MAP</strong>
+        <span class="label">Perplexity</span>
         <vaadin-integer-field
           theme="small" 
           class="control"
+          has-controls
           .min=${5}
           .max=${50}
+          .step=${5}
           .value=${String(appState.mapPerplexity)} 
           .disabled=${appState.isGeneratingMap > 0} 
           @change=${(event: CustomEvent) => {
             appState.mapPerplexity = Number((event.target as HTMLInputElement).value); 
           }}>
         </vaadin-integer-field>
-        <span class="label">Theta:</span>
+        <span class="label">Theta</span>
         <vaadin-number-field
           theme="small" 
           class="control"
+          has-controls
           .min=${0.01}
           .max=${1}
+          .step=${0.1}
           .value=${String(appState.mapTheta)} 
           .disabled=${appState.isGeneratingMap > 0} 
           @change=${(event: CustomEvent) => {
             appState.mapTheta = Number((event.target as HTMLInputElement).value); 
           }}>
         </vaadin-number-field>
-        <span class="label">Epochs:</span>
+        <span class="label">Epochs</span>
         <vaadin-integer-field
           theme="small" 
           class="control"
-          .min=${1}
+          has-controls
+          .min=${0}
           .max=${10000}
+          .step=${100}
           .value=${String(appState.mapEpochs)} 
           .disabled=${appState.isGeneratingMap > 0} 
           @change=${(event: CustomEvent) => {

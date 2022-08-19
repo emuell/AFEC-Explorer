@@ -5,6 +5,8 @@ import * as mobx from 'mobx';
 
 import { appState } from '../app-state';
 
+import eye from '../assets/images/eye.png'
+
 import '@vaadin/horizontal-layout';
 
 // -------------------------------------------------------------------------------------------------
@@ -25,9 +27,10 @@ export class AppFooter extends MobxLitElement {
       let newMessage = "";
       if (appState.isLoadingDatabase > 0) {
         newMessage = "Opening database...";
-      } 
-      else if (appState.isLoadingFiles > 0) {
+      } else if (appState.isLoadingFiles > 0) {
         newMessage = "Fetching files...";
+      } else if (appState.isGeneratingMap > 0) {
+        newMessage = "Generating t-SNE Map...";
       }
       if (newMessage !== "") {
         if (messageTimeoutId !== undefined) {
@@ -51,14 +54,37 @@ export class AppFooter extends MobxLitElement {
       height: 100%;
       padding: 0 4px;
       align-items: center;
+    }
+    #footer #status {
+      flex: 1; 
+      margin-left: 8px;
       font-size: smaller;
+      font-weight: 500;
+    }
+    #footer #eye {
+      margin-right: 8px;
+      width: auto; 
+      height: var(--lumo-font-size-xxl);
+    }
+    #footer #logo {
+      margin-left: 8px;
+      margin-right: 4px;
+      margin-bottom: 2px;
+      font-weight: bolder;
+      font-size: smaller;
+      width: auto; 
+      height: var(--lumo-font-size-xl);
     }
   `;
 
   render() {
     return html`
       <vaadin-horizontal-layout id="footer">
-        ${this._statusMessage}
+        <div id="status">
+          ${this._statusMessage}
+        </div>
+        <div id="logo">AFEC</div>
+        <img src=${eye} id="eye" />
       </vaadin-horizontal-layout>
     `;
   }
