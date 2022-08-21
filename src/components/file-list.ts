@@ -5,12 +5,12 @@ import * as mobx from 'mobx'
 import prettyBytes from 'pretty-bytes';
 
 import { 
-  Grid, GridActiveItemChangedEvent, GridColumn, GridItemModel,
-  GridDataProviderCallback, GridDataProviderParams, GridSorterDefinition
+  Grid, GridActiveItemChangedEvent, GridColumn, GridItemModel
 } from '@vaadin/grid';
 
 import { appState } from '../app-state';
 import { File } from '../models/file';
+import { FileListDataProvider } from './file-list-data-provider';
 
 import './error-message';
 import './spinner';
@@ -32,9 +32,7 @@ export class FileList extends MobxLitElement {
   private _searchString: string = "";
   
   // NB: not a state or observable: data-provider update is manually triggered 
-  private _files: File[] = [];
-  private _sortedFiles: File[] = [];
-  private _sortedFilesOrder?: GridSorterDefinition = undefined;
+  private _dataProvider = new FileListDataProvider();
 
   @state()
   private _fetchError: string = "";
@@ -65,8 +63,6 @@ export class FileList extends MobxLitElement {
 
     // bind context for renderers which are using this
     this._actionRenderer = this._actionRenderer.bind(this);
-    // bind context for data provider
-    this._dataProvider = this._dataProvider.bind(this);
   }
 
   private _playFile(_file: File) {
@@ -77,19 +73,15 @@ export class FileList extends MobxLitElement {
     if (! appState.databasePath) {
       this._fetchError = "No database selected";
       this._selectedFiles = [];
-      this._files = [];
-      this._sortedFiles = [];
-      this._sortedFilesOrder = undefined;
+      this._dataProvider.files = [];
       return;
     }
     appState.fetchFiles(this._searchString)
       .then((files) => {
         // assign and request data provider update
         this._selectedFiles = [];
-        this._files = files;
+        this._dataProvider.files = files;
         if (this._grid) {
-          this._sortedFiles = [];
-          this._sortedFilesOrder = undefined;
           this._grid.clearCache();
         }
         // request auto column width update
@@ -100,96 +92,8 @@ export class FileList extends MobxLitElement {
       .catch((error) => {
         this._fetchError = error.message || String(error);
         this._selectedFiles = [];
-        this._files = [];
-        this._sortedFiles = [];
-        this._sortedFilesOrder = undefined;
+        this._dataProvider.files = [];
       })
-  }
-
-  private _getSortedFiles(params: GridDataProviderParams<File>): File[] {
-
-    // sorting helper functions, copied from @vaadin-grid/array-data-provider.js
-    function normalizeEmptyValue(value: any) {
-      if ([undefined, null].includes(value)) {
-        return '';
-      } else if (isNaN(value)) {
-        return value.toString();
-      }
-      return value;
-    }
-    function compare(a: any, b: any) {
-      a = normalizeEmptyValue(a);
-      b = normalizeEmptyValue(b);
-
-      if (a < b) {
-        return -1;
-      }
-      if (a > b) {
-        return 1;
-      }
-      return 0;
-    }
-    function get(path: string, object: any) {
-      return path.split('.').reduce((obj, property) => obj[property], object);
-    }
-
-    // get sort order (multi sorting not supported ATM)
-    let sortOrder: GridSorterDefinition = {
-      path: "name",
-      direction: "asc"
-    };
-    if (params.sortOrders && params.sortOrders.length) {
-      if (params.sortOrders[0].direction) {
-        sortOrder = params.sortOrders[0];
-      }
-    }
-
-    // return cached values if the sort order did not change
-    if (this._sortedFilesOrder && 
-        this._sortedFilesOrder.direction === sortOrder.direction &&
-        this._sortedFilesOrder.path === sortOrder.path) {
-      return this._sortedFiles;
-    }
-
-    // get items from files and apply our customized sorting
-    this._sortedFilesOrder = sortOrder;
-    this._sortedFiles = Array.from(this._files);
-    this._sortedFiles.sort((a: File, b: File) => {
-      // keep directories at top or bottom when sorting by name
-      if (sortOrder.path === "name") {
-        // and do a "natural" sort on names
-        const options = { numeric: true, sensitivity: "base" };
-        if (sortOrder.direction === 'asc') {
-          return a.filename.localeCompare(b.filename, undefined, options);
-        } else { 
-          return b.filename.localeCompare(a.filename, undefined, options);
-        }
-      } else {
-        // apply custom sorting 
-        if (sortOrder.direction === 'asc') {
-          return compare(get(sortOrder.path, a), get(sortOrder.path, b));
-        } else { 
-          return compare(get(sortOrder.path, b), get(sortOrder.path, a));
-        }
-      }
-    });
-  
-    return this._sortedFiles;
-  }
-
-  private _dataProvider(
-    params: GridDataProviderParams<File>,
-    callback: GridDataProviderCallback<File>
-  ) {
-    const items = this._getSortedFiles(params);
-    const count = Math.min(items.length, params.pageSize);
-    const start = params.page * count;
-    const end = start + count;
-    if (start !== 0 || end !== items.length) {
-      callback(items.slice(start, end), items.length);
-    } else {
-      callback(items, items.length);
-    }
   }
 
   private _activeItemChanged(e: GridActiveItemChangedEvent<File>) {
@@ -419,7 +323,7 @@ export class FileList extends MobxLitElement {
       <vaadin-grid
         id="grid"
         theme="compact no-border small" 
-        .dataProvider=${this._dataProvider}
+        .dataProvider=${this._dataProvider.provider}
         .selectedItems=${this._selectedFiles}
         @active-item-changed=${this._activeItemChanged}
       >
