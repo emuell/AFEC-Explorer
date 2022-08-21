@@ -33,7 +33,9 @@ export class FileList extends MobxLitElement {
   
   // NB: not a state or observable: data-provider update is manually triggered 
   private _files: File[] = [];
-  
+  private _sortedFiles: File[] = [];
+  private _sortedFilesOrder?: GridSorterDefinition = undefined;
+
   @state()
   private _fetchError: string = "";
 
@@ -76,6 +78,8 @@ export class FileList extends MobxLitElement {
       this._fetchError = "No database selected";
       this._selectedFiles = [];
       this._files = [];
+      this._sortedFiles = [];
+      this._sortedFilesOrder = undefined;
       return;
     }
     appState.fetchFiles(this._searchString)
@@ -84,6 +88,8 @@ export class FileList extends MobxLitElement {
         this._selectedFiles = [];
         this._files = files;
         if (this._grid) {
+          this._sortedFiles = [];
+          this._sortedFilesOrder = undefined;
           this._grid.clearCache();
         }
         // request auto column width update
@@ -95,10 +101,12 @@ export class FileList extends MobxLitElement {
         this._fetchError = error.message || String(error);
         this._selectedFiles = [];
         this._files = [];
+        this._sortedFiles = [];
+        this._sortedFilesOrder = undefined;
       })
   }
 
-  private _sortFiles(params: GridDataProviderParams<File>): File[] {
+  private _getSortedFiles(params: GridDataProviderParams<File>): File[] {
 
     // sorting helper functions, copied from @vaadin-grid/array-data-provider.js
     function normalizeEmptyValue(value: any) {
@@ -136,9 +144,17 @@ export class FileList extends MobxLitElement {
       }
     }
 
+    // return cached values if the sort order did not change
+    if (this._sortedFilesOrder && 
+        this._sortedFilesOrder.direction === sortOrder.direction &&
+        this._sortedFilesOrder.path === sortOrder.path) {
+      return this._sortedFiles;
+    }
+
     // get items from files and apply our customized sorting
-    const items = Array.from(this._files);
-    items.sort((a: File, b: File) => {
+    this._sortedFilesOrder = sortOrder;
+    this._sortedFiles = Array.from(this._files);
+    this._sortedFiles.sort((a: File, b: File) => {
       // keep directories at top or bottom when sorting by name
       if (sortOrder.path === "name") {
         // and do a "natural" sort on names
@@ -158,14 +174,14 @@ export class FileList extends MobxLitElement {
       }
     });
   
-    return items;
+    return this._sortedFiles;
   }
 
   private _dataProvider(
     params: GridDataProviderParams<File>,
     callback: GridDataProviderCallback<File>
   ) {
-    const items = this._sortFiles(params);
+    const items = this._getSortedFiles(params);
     const count = Math.min(items.length, params.pageSize);
     const start = params.page * count;
     const end = start + count;
@@ -407,7 +423,7 @@ export class FileList extends MobxLitElement {
         .selectedItems=${this._selectedFiles}
         @active-item-changed=${this._activeItemChanged}
       >
-        <vaadin-grid-column .flexGrow=${0} .autoWidth=${true} path="path" header="" frozen
+        <vaadin-grid-column .flexGrow=${0} .width=${"2.65rem"} path="path" header="" frozen
           .renderer=${this._actionRenderer}></vaadin-grid-column>
           <vaadin-grid-sort-column .flexGrow=${2} .width=${"12rem"} path="name" direction="asc" frozen resizable
           .renderer=${this._nameRenderer}></vaadin-grid-sort-column>
