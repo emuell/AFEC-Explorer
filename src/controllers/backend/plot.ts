@@ -8,7 +8,7 @@ import { invoke } from '@tauri-apps/api/tauri'
  */
 
 export interface PlotEntry {
-  filename: String,
+  filename: string,
   x: number,
   y: number,
   categories: Array<string>,
