@@ -23,6 +23,8 @@ simplelog = { version = "^0.11.0" }
 # NB: set features = ["api-all", "devtools"] to enable dev tools in release builds 
 tauri = { version = "1.0.5", features = ["api-all"] }
 tauri-plugin-window-state = { version = "0.1" }
+symphonia = { version = "0.5", features = [ "aac", "alac", "mp3", "isomp4" ] }
+rodio = { version = "0.15", features = ["symphonia-all"] }
 sqlite = "0.26.0"
 bhtsne = "0.5.1"
 rstats = "1.2.12"

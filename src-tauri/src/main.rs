@@ -3,10 +3,10 @@
     windows_subsystem = "windows"
 )]
 
+mod audio;
 mod tsne;
 
 use simplelog::*;
-use tsne::plot::create_plot;
 
 fn main() {
     tauri::Builder::default()
@@ -44,7 +44,12 @@ fn main() {
         })
         .plugin(tauri_plugin_sqlite::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
-        .invoke_handler(tauri::generate_handler![create_plot])
+        .manage(audio::PlaybackState::new())
+        .invoke_handler(tauri::generate_handler![
+            tsne::plot::create_plot,
+            audio::initialize_audio,
+            audio::play_audio_file
+        ])
         .run(tauri::generate_context!())
         .expect("Error while running tauri application");
 }
