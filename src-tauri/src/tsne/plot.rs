@@ -18,6 +18,8 @@ pub async fn create_plot(
     perplexity: f32,
     epochs: usize,
 ) -> Result<Vec<PlotEntry>, String> {
+    log::info!("Creating t-SNE plot for db: {db_path} theta: {theta} perplexity: {perplexity} epochs: {epochs}");
+
     // validate args
     if !(0.0..1.0).contains(&theta) {
         return Err(format!(
@@ -37,6 +39,7 @@ pub async fn create_plot(
             epochs
         ));
     }
+
     // read database input
     let mut rows = database::get_tsne_features(db_path).map_err(|e| e.to_string())?;
     if rows.is_empty() {
