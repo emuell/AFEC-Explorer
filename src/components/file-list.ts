@@ -10,8 +10,9 @@ import {
 
 import { appState } from '../app-state';
 import { File } from '../models/file';
-import { FileListDataProvider } from './file-list-data-provider';
+import { playAudioFile } from '../controllers/backend/audio';
 
+import { FileListDataProvider } from './file-list-data-provider';
 import './error-message';
 import './spinner';
 
@@ -65,8 +66,11 @@ export class FileList extends MobxLitElement {
     this._actionRenderer = this._actionRenderer.bind(this);
   }
 
-  private _playFile(_file: File) {
-    // TODO
+  private _playFile(file: File) {
+    playAudioFile(appState.databasePath, file.filename)
+      .catch(err => {
+        console.warn("Audio playback error: %s", err.message || String(err))
+      });
   }
 
   private _fetchFiles() {

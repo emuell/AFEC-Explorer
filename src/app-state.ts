@@ -41,6 +41,10 @@ class AppState {
   @mobx.observable
   mapTheta: number = 0.5;
 
+  // audio playback
+  @mobx.observable
+  autoPlayFiles: boolean = true;
+  
   // initialize app state
   constructor() {
     mobx.makeObservable(this);

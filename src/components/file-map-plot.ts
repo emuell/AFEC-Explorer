@@ -3,8 +3,10 @@ import { customElement, property, query } from 'lit/decorators.js'
 
 import * as d3 from "d3";
 
-import { appState } from '../app-state';
 import { PlotEntry } from '../controllers/backend/plot';
+import { playAudioFile } from '../controllers/backend/audio';
+
+import { appState } from '../app-state';
 
 // -------------------------------------------------------------------------------------------------
 
@@ -42,6 +44,7 @@ export class FileMapPlot extends LitElement {
 
   // Mutable state
   private _selectedPointIndex: number = -1;
+  private _playingPointIndex: number = -1;
   private _zoomTransform = d3.zoomIdentity;
   
   // Consts
@@ -92,6 +95,14 @@ export class FileMapPlot extends LitElement {
         .html(`File: ${closestPoint.filename}<br>` + 
           `Class: ${closestPoint.classes.join(",")}<br>` + 
           `Categories: ${closestPoint.categories.join(",")}`);
+      // Play the file
+      if (appState.autoPlayFiles && this._playingPointIndex != closestPoint.index) {
+        this._playingPointIndex = closestPoint.index;
+        playAudioFile(appState.databasePath, closestPoint.filename)
+          .catch((err) => { 
+            console.log("Audio playback failed: %s", err)
+          });
+      }
     } else {
       // Hide the tooltip when there our mouse doesn't find nodeData
       d3.select(this._toolTip!)
@@ -113,6 +124,11 @@ export class FileMapPlot extends LitElement {
         this._selectedPointIndex = closestPoint.index;
         // redraw all points
         this._drawPlotPoints(xScale, yScale, context, data);
+        // play file
+        playAudioFile(appState.databasePath, closestPoint.filename)
+          .catch((err) => { 
+            console.log("Audio playback failed: %s", err)
+          });
       }
     } else {
       if (this._selectedPointIndex != -1) {

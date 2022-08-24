@@ -9,6 +9,7 @@ import { PlotEntry } from '../controllers/backend/plot';
 import '@vaadin/integer-field';
 import '@vaadin/number-field';
 import '@vaadin/horizontal-layout';
+import '@vaadin/checkbox';
 
 import './file-map-plot';
 import './error-message';
@@ -66,6 +67,7 @@ export class FileMap extends MobxLitElement {
     :host {
       display: flex;
       flex-direction: column;
+      justify-content: center;
     }
     #header {
       align-items: center; 
@@ -73,19 +75,24 @@ export class FileMap extends MobxLitElement {
       padding: 4px;
     }
     #header #title {
-      flex: 1;
       margin: 0px 10px;
       padding: 4px 0px;
+    }
+    #header .spacer {
+      flex: 1;
     }
     #header .control {
       margin-right: 12px;
       padding: unset;
       width: 6rem;
     }
-    #header .label {
+    #header .label, #header label{
       margin-right: 4px;
       color: var(--lumo-tertiary-text-color);
       font-size: var(--lumo-font-size-s);
+    }
+    #header label {
+      padding: unset;      
     }
     #loading {
       height: 100%; 
@@ -104,6 +111,15 @@ export class FileMap extends MobxLitElement {
     const header = html`
       <vaadin-horizontal-layout id="header">
         <strong id="title">MAP</strong>
+        <vaadin-checkbox
+          class="control" 
+          .checked=${appState.autoPlayFiles} 
+          @checked-changed=${(event: CustomEvent) => {
+            appState.autoPlayFiles = Boolean(event.detail.value); 
+          }}
+          label="Auto-Play">
+        </vaadin-checkbox>
+        <div class="spacer"></div>
         <span class="label">Perplexity</span>
         <vaadin-integer-field
           theme="small" 

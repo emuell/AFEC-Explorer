@@ -15,6 +15,7 @@
     "@adobe/lit-mobx": "^2.0.0",
     "@tauri-apps/api": "^1.0.2",
     "@vaadin/button": "^23.1.1",
+    "@vaadin/checkbox": "^23.1.6",
     "@vaadin/dialog": "^23.1.2",
     "@vaadin/grid": "^23.1.2",
     "@vaadin/horizontal-layout": "^23.1.1",
