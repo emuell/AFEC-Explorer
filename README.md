@@ -5,9 +5,9 @@ This repository contains an experimental GUI for [AFEC](https://github.com/emuel
 
 ## Features
 
-- Shows high-level features of an afec database in a table.
+- Shows high-level features of an AFEC high-level database in a grid.
 - Shows a 2d t-SNE cluster from the afec high-level classification data.
-- TODO/WIP: Clicking on a file in the table or map plays the audio file and shows the sample waveform.
+- Hovering or clicking on a file in the table or map plays the audio file.
 
 
 ## Development
@@ -19,5 +19,6 @@ This repository contains an experimental GUI for [AFEC](https://github.com/emuel
 
 ### Building
 
-- Development with hot-reloading `npm run tauri dev`
-- Release packages `npm run tauri build`
+- Install node dependencies via `npm install`
+- Build and run a **development** build with hot-reloading: `npm run tauri dev`
+- Build a **production** binary: `npm run tauri build`
