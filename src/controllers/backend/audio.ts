@@ -16,10 +16,9 @@ invoke<void>('initialize_audio')
 /* 
   Play back a single audio file from a database. This stops all previously playing files.
  */
-
 export async function playAudioFile(dbPath: string, filePath: string): Promise<void> {
   let absPath = filePath;
-  if (absPath.startsWith("./") ||  !path.isAbsolute(absPath)) {
+  if (!await path.isAbsolute(absPath)) {
     absPath = await path.join(await path.dirname(dbPath), absPath);
   }
   return invoke<void>('play_audio_file', { filePath: absPath });

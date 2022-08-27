@@ -1,7 +1,10 @@
 use super::database;
-use bhtsne;
 use rstats::Vecg;
+use string_error::*;
 
+// -------------------------------------------------------------------------------------------------
+
+// Description of a single AFEC sample row in the t-SNE plot
 #[derive(serde::Serialize, Debug, Default)]
 pub struct PlotEntry {
     filename: Box<str>,
@@ -11,37 +14,38 @@ pub struct PlotEntry {
     classes: Vec<Box<str>>,
 }
 
-#[tauri::command]
-pub async fn create_plot(
+// -------------------------------------------------------------------------------------------------
+
+pub fn create_plot(
     db_path: String,
     theta: f32,
     perplexity: f32,
     epochs: usize,
-) -> Result<Vec<PlotEntry>, String> {
+) -> Result<Vec<PlotEntry>, Box<dyn std::error::Error>> {
     log::info!("Creating t-SNE plot for db: {db_path} theta: {theta} perplexity: {perplexity} epochs: {epochs}");
 
     // validate args
     if !(0.0..1.0).contains(&theta) {
-        return Err(format!(
+        return Err(into_err(format!(
             "Invalid TSNE arg: 'theta' must be in (0, 1)): {}",
             theta
-        ));
+        )));
     }
     if !(5.0..=50.0).contains(&perplexity) {
-        return Err(format!(
+        return Err(into_err(format!(
             "Invalid TSNE arg: 'perplexity' must be in [5, 50]): {}",
             perplexity
-        ));
+        )));
     }
     if !(1..=10_000).contains(&epochs) {
-        return Err(format!(
+        return Err(into_err(format!(
             "Invalid TSNE arg: 'epochs' must be in [1, 10000] {}",
             epochs
-        ));
+        )));
     }
 
     // read database input
-    let mut rows = database::get_tsne_features(db_path).map_err(|e| e.to_string())?;
+    let mut rows = database::get_tsne_features(db_path)?;
     if rows.is_empty() {
         return Ok(vec![]);
     }
@@ -60,7 +64,7 @@ pub async fn create_plot(
 
     // avoid that bhtsne panics: see check_perplexity in mod.rs
     if samples.len() as f32 - 1.0 < 3.0 * perplexity {
-        return Err("Can't generate map: too litte samples".to_string());
+        return Err(new_err("Can't generate map: too litte samples"));
     }
 
     let mut tsne = bhtsne::tSNE::new(&samples);

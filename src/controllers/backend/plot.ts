@@ -4,7 +4,7 @@ import { invoke } from '@tauri-apps/api/tauri'
 
 /* 
   Result for a single entry of an AFEC high level database tSNE map 
-  struct PlotEntry in `src-tauri/plot`
+  struct PlotEntry in `src-tauri/plot/tsne`
  */
 
 export interface PlotEntry {
@@ -23,5 +23,5 @@ export interface PlotEntry {
  */
 
 export function createPlot(dbPath: string, perplexity: number, theta: number, epochs: number) {
-  return invoke<PlotEntry[]>('create_plot', { dbPath, perplexity, theta, epochs });
+  return invoke<PlotEntry[]>('create_tsne_plot', { dbPath, perplexity, theta, epochs });
 }

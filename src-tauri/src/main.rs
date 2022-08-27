@@ -4,9 +4,10 @@
 )]
 
 mod audio;
-mod tsne;
-
+mod plot;
 use simplelog::*;
+
+// -------------------------------------------------------------------------------------------------
 
 fn main() {
     tauri::Builder::default()
@@ -44,9 +45,9 @@ fn main() {
         })
         .plugin(tauri_plugin_sqlite::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
-        .manage(audio::PlaybackState::new())
+        .manage(audio::playback::Playback::new())
         .invoke_handler(tauri::generate_handler![
-            tsne::plot::create_plot,
+            plot::create_tsne_plot,
             audio::initialize_audio,
             audio::play_audio_file
         ])

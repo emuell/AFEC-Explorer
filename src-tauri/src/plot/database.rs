@@ -1,6 +1,9 @@
 use sqlite::Connection;
 use std::collections::VecDeque;
 
+// -------------------------------------------------------------------------------------------------
+
+// Features pulled from the AFEC database in order to create a t-SNE plot
 #[derive(Debug, Default)]
 pub struct TsneFeatureRow {
     pub filename: Box<str>,
@@ -8,6 +11,8 @@ pub struct TsneFeatureRow {
     pub classes: Vec<Box<str>>,
     pub categories: Vec<Box<str>>,
 }
+
+// -------------------------------------------------------------------------------------------------
 
 pub fn get_tsne_features(
     path: String,
