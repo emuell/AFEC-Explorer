@@ -45,11 +45,13 @@ fn main() {
         })
         .plugin(tauri_plugin_sqlite::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
-        .manage(audio::playback::Playback::new())
+        .manage(audio::Playback::new())
         .invoke_handler(tauri::generate_handler![
             plot::create_tsne_plot,
             audio::initialize_audio,
-            audio::play_audio_file
+            audio::play_audio_file,
+            audio::seek_audio_file,
+            audio::stop_audio_file
         ])
         .run(tauri::generate_context!())
         .expect("Error while running tauri application");
