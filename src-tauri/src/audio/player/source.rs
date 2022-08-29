@@ -1,6 +1,4 @@
-use crate::audio::resample::ResamplingSpec;
-
-use super::resample::{AudioResampler, ResamplingQuality};
+use crate::audio::resampler::{AudioResampler, ResamplingQuality, ResamplingSpec};
 
 // -------------------------------------------------------------------------------------------------
 

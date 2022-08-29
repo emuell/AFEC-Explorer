@@ -1,15 +1,13 @@
 mod actor;
-mod decode;
+mod decoder;
 mod error;
-mod output;
-mod resample;
-mod source;
-pub mod worker;
+mod player;
+mod resampler;
 
-use self::output::{AudioOutput, DefaultAudioOutput, DefaultAudioSink};
-use self::worker::{
-    file::AudioFile,
-    player::{PlaybackEvent, PlaybackManager},
+use self::player::{
+    file::AudioPlayerFile,
+    output::{AudioOutput, DefaultAudioOutput, DefaultAudioSink},
+    {PlaybackEvent, PlaybackManager},
 };
 use std::sync::Mutex;
 
@@ -20,7 +18,7 @@ use std::sync::Mutex;
 enum PlaybackCommand {
     Play {
         file_path: String,
-        source: AudioFile,
+        source: AudioPlayerFile,
     },
     Seek {
         file_path: String,
@@ -54,7 +52,7 @@ impl Playback {
         command_rx: &crossbeam_channel::Receiver<PlaybackCommand>,
         event_rx: &crossbeam_channel::Receiver<PlaybackEvent>,
         manager: &mut PlaybackManager,
-    ) {
+    ) -> ! {
         loop {
             crossbeam_channel::select! {
                 recv(command_rx) -> msg => {
@@ -118,7 +116,7 @@ impl Playback {
         std::thread::spawn(move || {
             // Open default device
             match DefaultAudioOutput::open().map_err(|err| err.to_string()) {
-                Err(err) => init_sx.send(Err(err.to_string())).unwrap(),
+                Err(err) => init_sx.send(Err(err)).unwrap(),
                 Ok(device) => {
                     let device_sink: DefaultAudioSink = device.sink();
 
@@ -153,7 +151,7 @@ impl Playback {
             ));
         }
         // load sound from given file path
-        let source = AudioFile::new(file_path.to_owned()).map_err(|err| err.to_string())?;
+        let source = AudioPlayerFile::new(file_path.to_owned()).map_err(|err| err.to_string())?;
 
         // send the source to the playback thread and start playing
         if let Some(sender) = self.command_sender.lock().unwrap().as_ref() {

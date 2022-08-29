@@ -1,3 +1,7 @@
+pub mod file;
+pub mod output;
+pub mod source;
+
 use std::{
     ops::Range,
     sync::{
@@ -14,16 +18,16 @@ use symphonia::core::{
     units::TimeBase,
 };
 
+use self::file::AudioPlayerFile;
+use self::output::{AudioSink, DefaultAudioSink};
+
 use crate::audio::{
     actor::{Act, Actor, ActorHandle},
-    decode::AudioDecoder,
+    decoder::AudioDecoder,
     error::Error,
-    output::{AudioSink, DefaultAudioSink},
-    resample::ResamplingQuality,
-    source::{AudioSource, ChannelMappedSource, ResampledSource},
+    player::source::{AudioSource, ChannelMappedSource, ResampledSource},
+    resampler::ResamplingQuality,
 };
-
-use super::file::AudioFile;
 
 // -------------------------------------------------------------------------------------------------
 
@@ -56,7 +60,7 @@ impl PlaybackManager {
         None
     }
 
-    pub fn play(&mut self, loaded: AudioFile) {
+    pub fn play(&mut self, loaded: AudioPlayerFile) {
         let file_path = loaded.file_path.clone();
         let source = DecoderSource::new(
             loaded.file_path,

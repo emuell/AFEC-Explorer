@@ -4,8 +4,8 @@ use crossbeam_channel::{bounded, Receiver, Sender};
 use crate::audio::{
     actor::{Act, Actor, ActorHandle},
     error::Error,
-    output::{AudioOutput, AudioSink},
-    source::{AudioSource, EmptySource},
+    player::output::{AudioOutput, AudioSink},
+    player::source::{AudioSource, EmptySource},
 };
 
 // -------------------------------------------------------------------------------------------------

@@ -3,6 +3,7 @@ use std::{error, fmt, io};
 // -------------------------------------------------------------------------------------------------
 
 #[derive(Debug)]
+#[allow(clippy::enum_variant_names)]
 pub enum Error {
     MediaFileNotFound,
     MediaFileProbeError,
