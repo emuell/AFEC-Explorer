@@ -15,31 +15,31 @@ tauri-build = { version = "1.0.4", features = [] }
 [dependencies]
 
 # common
-serde_json = "1.0"
-serde = { version = "1.0", features = ["derive"] }
-string-error = "0.1.0"
-log = { version = "0.4", features = ["max_level_debug", "release_max_level_info"] }
-simplelog = { version = "^0.11.0" }
-crossbeam-channel = { version = "0.5.2" }
+serde_json = "^1.0"
+serde = { version = "^1.0", features = ["derive"] }
+string-error = "^0.1"
+log = { version = "^0.4", features = ["max_level_debug", "release_max_level_info"] }
+simplelog = { version = "^0.12" }
+crossbeam-channel = { version = "0.5" }
 
 #tauri
 # NB: set features = ["api-all", "devtools"] to enable dev tools in release builds 
-tauri = { version = "1.0.5", features = ["api-all"] }
-tauri-plugin-window-state = { version = "0.1" }
+tauri = { version = "^1.0", features = ["api-all"] }
+tauri-plugin-window-state = { version = "^0.1" }
 tauri-plugin-sqlite = { git = "https://github.com/lzdyes/tauri-plugin-sqlite", tag = "v0.1.1" }
 
 # audio
-audio_thread_priority = { version = "0.26.0", default-features = false, features = ["winapi"] }
-cpal = { version = "0.14.0" }
+audio_thread_priority = { version = "^0.26", default-features = false, features = ["winapi"] }
+cpal = { version = "^0.14" }
 # OR: cubeb = { git = "https://github.com/mozilla/cubeb-rs" }
-symphonia = { version = "0.5", features = [ "aac", "alac", "mp3", "isomp4" ] }
-libsamplerate = { version = "0.1.0" }
-rb = { version = "0.4.0" }
+symphonia = { version = "^0.5", features = [ "aac", "alac", "mp3", "isomp4" ] }
+libsamplerate = { version = "^0.1" }
+rb = { version = "^0.4" }
 
 # tsne
-sqlite = "0.26.0"
-bhtsne = "0.5.1"
-rstats = "1.2.12"
+sqlite = "^0.26"
+bhtsne = "^0.5"
+rstats = "^1.2"
 
 [features]
 # by default Tauri runs in production mode when `tauri dev` runs it is executed with 
