@@ -33,7 +33,7 @@ use crate::audio::{
 
 pub enum PlaybackEvent {
     Position { path: String, position: Duration },
-    EndOfFile,
+    EndOfFile { path: String },
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -231,7 +231,13 @@ impl AudioSource for DecoderSource {
         if position >= total_samples {
             // After reading the total number of samples, we stop. Signal to the upper layer
             // this track is over and short-circuit all further reads from this source.
-            if self.event_send.try_send(PlaybackEvent::EndOfFile).is_ok() {
+            if self
+                .event_send
+                .try_send(PlaybackEvent::EndOfFile {
+                    path: self.file_path.clone(),
+                })
+                .is_ok()
+            {
                 self.end_of_track = true;
             }
         }

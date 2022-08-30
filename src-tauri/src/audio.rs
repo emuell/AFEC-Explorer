@@ -4,9 +4,12 @@ mod error;
 mod player;
 mod resampler;
 
+use tauri::Manager;
+
+use self::actor::{Act, Actor};
 use self::player::{
     file::AudioPlayerFile,
-    output::{AudioOutput, DefaultAudioOutput, DefaultAudioSink},
+    output::{AudioOutput, DefaultAudioOutput},
     {PlaybackEvent, PlaybackManager},
 };
 use std::sync::Mutex;
@@ -30,8 +33,6 @@ enum PlaybackCommand {
     StopAll,
 }
 
-// -------------------------------------------------------------------------------------------------
-
 // Global audio playback state, shared in Tauri.
 pub struct Playback {
     command_sender: Mutex<Option<crossbeam_channel::Sender<PlaybackCommand>>>,
@@ -47,57 +48,11 @@ impl Playback {
         }
     }
 
-    // apply playback commands send to our audio worker thread
-    fn run_command_loop(
-        command_rx: &crossbeam_channel::Receiver<PlaybackCommand>,
-        event_rx: &crossbeam_channel::Receiver<PlaybackEvent>,
-        manager: &mut PlaybackManager,
-    ) -> ! {
-        loop {
-            crossbeam_channel::select! {
-                recv(command_rx) -> msg => {
-                    match msg.unwrap() {
-                        // Play
-                        PlaybackCommand::Play { file_path, source } => {
-                            log::info!("Start playing file: '{file_path}'");
-                            manager.play(source);
-                        }
-                        // Seek
-                        PlaybackCommand::Seek { file_path, seek_pos_seconds } => {
-                            log::info!("Stop playing file: '{file_path}'");
-                            if let Some(playing_file_path) = manager.playing_file() {
-                                if file_path == playing_file_path {
-                                    manager.seek(std::time::Duration::from_millis(seek_pos_seconds as u64 * 1000));
-                                }
-                            }
-                        }// Stop
-                        PlaybackCommand::Stop { file_path } => {
-                            log::info!("Stop playing file: '{file_path}'");
-                            if let Some(playing_file_path) = manager.playing_file() {
-                                if file_path == playing_file_path {
-                                    manager.stop();
-                                }
-                            }
-                        }
-                        // StopAll
-                        PlaybackCommand::StopAll => {
-                            log::info!("Stop all playing files");
-                            manager.stop();
-                        }
-                    }
-                },
-                recv(event_rx) -> msg => {
-                    match msg.unwrap() {
-                        PlaybackEvent::Position{..} => (),
-                        PlaybackEvent::EndOfFile => (),
-                    }
-                }
-            }
-        }
-    }
-
     // Initialize audio playback device
-    pub fn initialize(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn initialize(
+        &self,
+        app_handle: tauri::AppHandle,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         // check if we already got initialized
         if self.command_sender.lock().unwrap().is_some() {
             return Err(string_error::new_err(
@@ -105,42 +60,23 @@ impl Playback {
             ));
         }
 
-        // create command and init channels
-        let (command_sx, command_rx) = crossbeam_channel::unbounded::<PlaybackCommand>();
-        let (init_sx, init_rx) = crossbeam_channel::bounded::<Result<(), String>>(1);
-
-        // store command sender in our shared state
-        *self.command_sender.lock().unwrap() = Some(command_sx);
-
-        // start our detached audio command thread
-        std::thread::spawn(move || {
-            // Open default device
-            match DefaultAudioOutput::open().map_err(|err| err.to_string()) {
-                Err(err) => init_sx.send(Err(err)).unwrap(),
-                Ok(device) => {
-                    let device_sink: DefaultAudioSink = device.sink();
-
-                    let (event_sx, event_rx) = crossbeam_channel::unbounded();
-                    let mut manager = PlaybackManager::new(device_sink, event_sx);
-
-                    init_sx.send(Ok(())).unwrap();
-
-                    // Run playback command loop
-                    Playback::run_command_loop(&command_rx, &event_rx, &mut manager);
-                }
+        match PlaybackActor::new(app_handle) {
+            Ok(playback_impl) => {
+                let actor =
+                    PlaybackActor::spawn_with_default_cap("audio_playback_manager", move |_| {
+                        playback_impl
+                    });
+                *self.command_sender.lock().unwrap() = Some(actor.sender());
+                *self.init_error.lock().unwrap() = None;
+                Ok(())
             }
-        });
-
-        // wait for init to finish, memorize error and return it
-        if let Err(err) = init_rx.recv().unwrap() {
-            *self.init_error.lock().unwrap() = Some(err.to_string());
-            log::error!("Audio playpack init failed: {err}");
-            return Err(string_error::new_err(err.as_str()));
+            Err(err) => {
+                *self.init_error.lock().unwrap() = Some(err.to_string());
+                Err(string_error::new_err(&err))
+            }
         }
-        Ok(())
     }
 
-    // Play a single audio file and stop all others
     pub fn play(&self, file_path: String) -> Result<(), Box<dyn std::error::Error>> {
         log::info!("Decoding audio file for playback: '{file_path}'");
 
@@ -215,10 +151,118 @@ impl Playback {
 
 // -------------------------------------------------------------------------------------------------
 
+// Playback actor: receives and forwards playback events from the UI to the playback manager
+struct PlaybackActor {
+    #[allow(dead_code)]
+    audio_output: DefaultAudioOutput,
+    playback_manager: PlaybackManager,
+}
+
+impl PlaybackActor {
+    fn new(app_handle: tauri::AppHandle) -> Result<PlaybackActor, String> {
+        // Open default device
+        match DefaultAudioOutput::open().map_err(|err| err.to_string()) {
+            Err(err) => Err(err),
+            Ok(audio_output) => {
+                // create playback manager
+                let (event_sx, event_rx) = crossbeam_channel::unbounded();
+                let playback_manager = PlaybackManager::new(audio_output.sink(), event_sx);
+
+                // handle events from playback manager
+                Self::process_playback_manager_events(app_handle, event_rx);
+
+                Ok(Self {
+                    audio_output,
+                    playback_manager,
+                })
+            }
+        }
+    }
+
+    fn process_playback_manager_events(
+        app_handle: tauri::AppHandle,
+        event_rx: crossbeam_channel::Receiver<PlaybackEvent>,
+    ) {
+        std::thread::Builder::new()
+            .name("audio_playback_events".to_string())
+            .spawn(move || loop {
+                match event_rx.recv() {
+                    Ok(event) => match event {
+                        PlaybackEvent::Position { path, position } => {
+                            send_playback_position_event(&app_handle, path, position)
+                        }
+                        PlaybackEvent::EndOfFile { path } => {
+                            send_playback_finished_event(&app_handle, path)
+                        }
+                    },
+                    Err(err) => {
+                        log::info!("Playback event channel closed: '{err}'");
+                        break;
+                    }
+                }
+            })
+            .unwrap();
+    }
+}
+
+impl Actor for PlaybackActor {
+    type Message = PlaybackCommand;
+    type Error = String;
+
+    fn handle(&mut self, msg: PlaybackCommand) -> Result<Act<Self>, Self::Error> {
+        match msg {
+            // Play
+            PlaybackCommand::Play { file_path, source } => {
+                log::info!("Start playing file: '{file_path}'");
+                self.playback_manager.play(source);
+                Ok(Act::Continue)
+            }
+            // Seek
+            PlaybackCommand::Seek {
+                file_path,
+                seek_pos_seconds,
+            } => {
+                log::info!("Stop playing file: '{file_path}'");
+                if let Some(playing_file_path) = self.playback_manager.playing_file() {
+                    if file_path == playing_file_path {
+                        self.playback_manager.seek(std::time::Duration::from_millis(
+                            (seek_pos_seconds as u64) * 1000,
+                        ));
+                    }
+                }
+                Ok(Act::Continue)
+            }
+            // Stop
+            PlaybackCommand::Stop { file_path } => {
+                log::info!("Stop playing file: '{file_path}'");
+                if let Some(playing_file_path) = self.playback_manager.playing_file() {
+                    if file_path == playing_file_path {
+                        self.playback_manager.stop();
+                    }
+                }
+                Ok(Act::Continue)
+            }
+            // StopAll
+            PlaybackCommand::StopAll => {
+                log::info!("Stop all playing files");
+                self.playback_manager.stop();
+                Ok(Act::Continue)
+            }
+        }
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
 // Initialize audio playback device
 #[tauri::command]
-pub fn initialize_audio(playback: tauri::State<Playback>) -> Result<(), String> {
-    playback.initialize().map_err(|err| err.to_string())
+pub fn initialize_audio(
+    playback: tauri::State<Playback>,
+    app_handle: tauri::AppHandle,
+) -> Result<(), String> {
+    playback
+        .initialize(app_handle)
+        .map_err(|err| err.to_string())
 }
 
 // Play a single audio file. Playback must once be initialized via `initialize_audio`
@@ -243,4 +287,40 @@ pub fn seek_audio_file(
 #[tauri::command]
 pub fn stop_audio_file(file_path: String, playback: tauri::State<Playback>) -> Result<(), String> {
     playback.stop(file_path).map_err(|err| err.to_string())
+}
+
+// Send a playback position event to the frontend
+pub fn send_playback_position_event(
+    app_handle: &tauri::AppHandle,
+    path: String,
+    position: std::time::Duration,
+) {
+    #[derive(Clone, serde::Serialize)]
+    struct PlaybackPositionEvent {
+        path: String,
+        position: f64,
+    }
+    if let Err(error) = app_handle.emit_all(
+        "audio_playback_position",
+        PlaybackPositionEvent {
+            path,
+            position: (position.as_millis() as f64) / 1000.0,
+        },
+    ) {
+        log::warn!("Failed to send app event: {error}")
+    }
+}
+
+// Send a playback finished event to the frontend
+
+pub fn send_playback_finished_event(app_handle: &tauri::AppHandle, path: String) {
+    #[derive(Clone, serde::Serialize)]
+    struct PlaybackFinishedEvent {
+        path: String,
+    }
+    if let Err(error) =
+        app_handle.emit_all("audio_playback_finished", PlaybackFinishedEvent { path })
+    {
+        log::warn!("Failed to send app event: {error}")
+    }
 }
