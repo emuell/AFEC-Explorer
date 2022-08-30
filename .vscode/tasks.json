@@ -15,6 +15,20 @@
       "type": "shell",
       "command": "npm",
       "args": ["run", "build"]
+    },
+    {
+      "label": "tauri:dev",
+      "type": "shell",
+      "group": { "kind": "build", "isDefault": true },
+      "command": "npm",
+      "args": ["run", "tauri", "dev"]
+    },
+    {
+      "label": "tauri:build",
+      "type": "shell",
+      "group": { "kind": "build", "isDefault": false },
+      "command": "npm",
+      "args": ["run", "tauri", "build"]
     }
   ]
 }
