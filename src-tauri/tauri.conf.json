@@ -7,7 +7,7 @@
     "distDir": "../dist"
   },
   "package": {
-    "productName": "AFEC-GUI",
+    "productName": "AFEC-Explorer",
     "version": "0.1.0"
   },
   "tauri": {
@@ -70,7 +70,7 @@
         "fullscreen": false,
         "height": 600,
         "resizable": true,
-        "title": "AFEC",
+        "title": "AFEC-Explorer",
         "visible": false,
         "width": 800
       }

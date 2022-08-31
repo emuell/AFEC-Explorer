@@ -1,11 +1,11 @@
 [package]
-name = "afec-gui"
+name = "afec-explorer"
 version = "0.1.0"
-description = "A Tauri App"
+description = "Experimental GUI for browsing AFEC high-level databases"
 authors = ["emuell"]
 license = "GPL v3"
 repository = ""
-default-run = "afec-gui"
+default-run = "afec-explorer"
 edition = "2021"
 rust-version = "1.57"
 

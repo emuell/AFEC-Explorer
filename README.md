@@ -1,6 +1,6 @@
-# AFEC GUI
+# AFEC-Explorer
 
-This repository contains an experimental GUI for [AFEC](https://github.com/emuell/AFEC) using [Tauri](https://tauri.app).
+This repository contains an experimental GUI for browsing [AFEC](https://github.com/emuell/AFEC) *high-level* databases using [Tauri](https://tauri.app).
 
 
 ## Features
