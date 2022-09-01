@@ -49,6 +49,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             plot::create_tsne_plot,
             audio::initialize_audio,
+            audio::playing_audio_file,
             audio::play_audio_file,
             audio::seek_audio_file,
             audio::stop_audio_file

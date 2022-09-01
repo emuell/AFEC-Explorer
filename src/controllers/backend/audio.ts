@@ -12,6 +12,14 @@ invoke<void>('initialize_audio')
 
 // -------------------------------------------------------------------------------------------------
 
+// Abs path of currently playing back audio file, if any.
+// See also \function addPlaybackPositionEventListener 
+export async function playingAudioFile() {
+  return invoke<string>('playing_audio_file');
+}
+
+// -------------------------------------------------------------------------------------------------
+
 // Play back a single audio file from a database. This stops all previously playing files.
 export async function playAudioFile(dbPath: string, filePath: string): Promise<void> {
   let absPath = filePath;

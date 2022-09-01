@@ -85,6 +85,14 @@ impl Playback {
             .unwrap();
     }
 
+    pub fn playing_file(&self) -> Result<Option<String>, Box<dyn std::error::Error>> {
+        if let Some(playback_manager) = self.playback_manager.lock().unwrap().as_ref() {
+            Ok(playback_manager.playing_file())
+        } else {
+            Err(string_error::new_err("Playback not initialized"))
+        }
+    }
+
     pub fn play(&self, file_path: String) -> Result<(), Box<dyn std::error::Error>> {
         log::info!("Decoding audio file for playback: '{file_path}'");
 
@@ -165,6 +173,16 @@ pub fn initialize_audio(
     playback
         .initialize(app_handle)
         .map_err(|err| err.to_string())
+}
+
+// Currently playing file or an empty string when none is playing. Playback positions are
+// sent as global events: see \function send_playback_position_event for details.
+#[tauri::command]
+pub fn playing_audio_file(playback: tauri::State<Playback>) -> Result<String, String> {
+    match playback.playing_file() {
+        Ok(file) => Ok(file.unwrap_or_default()),
+        Err(err) => Err(err.to_string()),
+    }
 }
 
 // Play a single audio file. Playback must once be initialized via `initialize_audio`
