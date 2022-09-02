@@ -12,7 +12,7 @@ use symphonia::core::{
     units::TimeStamp,
 };
 
-use super::error::Error;
+use crate::audio::error::Error;
 
 // -------------------------------------------------------------------------------------------------
 

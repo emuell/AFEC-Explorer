@@ -1,4 +1,5 @@
-use crate::audio::{decoder::AudioDecoder, error::Error};
+use crate::audio::error::Error;
+use crate::audio::source::decoder::AudioDecoder;
 
 // -------------------------------------------------------------------------------------------------
 

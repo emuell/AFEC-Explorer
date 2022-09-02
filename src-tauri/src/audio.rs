@@ -1,8 +1,6 @@
-mod actor;
-mod decoder;
 mod error;
 mod player;
-mod resampler;
+mod source;
 
 use tauri::Manager;
 

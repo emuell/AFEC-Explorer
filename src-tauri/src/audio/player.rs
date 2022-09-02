@@ -1,6 +1,6 @@
+pub mod actor;
 pub mod file;
 pub mod output;
-pub mod source;
 
 use std::{
     ops::Range,
@@ -21,12 +21,12 @@ use symphonia::core::{
 use self::file::AudioPlayerFile;
 use self::output::{AudioSink, DefaultAudioSink};
 
-use crate::audio::{
-    actor::{Act, Actor, ActorHandle},
+use self::actor::{Act, Actor, ActorHandle};
+use crate::audio::error::Error;
+use crate::audio::source::{
     decoder::AudioDecoder,
-    error::Error,
-    player::source::{AudioSource, ChannelMappedSource, ResampledSource},
     resampler::ResamplingQuality,
+    {AudioSource, ChannelMappedSource, ResampledSource},
 };
 
 // -------------------------------------------------------------------------------------------------

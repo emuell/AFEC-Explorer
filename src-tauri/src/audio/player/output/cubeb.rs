@@ -2,14 +2,12 @@ use std::{env, ffi::CString, ops::Deref};
 
 use crossbeam_channel::{bounded, Receiver, Sender};
 
-use crate::{
+use crate::audio::error::Error;
+use crate::audio::player::{
     actor::{Act, Actor, ActorHandle},
-    audio::{
-        output::{AudioOutput, AudioSink},
-        source::{AudioSource, Empty},
-    },
-    error::Error,
+    output::{AudioOutput, AudioSink},
 };
+use crate::audio::source::{AudioSource, EmptySource};
 
 // -------------------------------------------------------------------------------------------------
 
@@ -73,7 +71,7 @@ impl Stream {
 
         let mut callback = StreamCallback {
             callback_recv,
-            source: Box::new(Empty),
+            source: Box::new(EmptySource),
             state: CallbackState::Paused,
             buffer: vec![0.0; 1024 * 1024],
         };

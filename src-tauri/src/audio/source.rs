@@ -1,4 +1,7 @@
-use crate::audio::resampler::{AudioResampler, ResamplingQuality, ResamplingSpec};
+pub(crate) mod decoder;
+pub(crate) mod resampler;
+
+use crate::audio::source::resampler::{AudioResampler, ResamplingQuality, ResamplingSpec};
 
 // -------------------------------------------------------------------------------------------------
 

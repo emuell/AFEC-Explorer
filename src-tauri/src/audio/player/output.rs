@@ -5,7 +5,7 @@ pub type DefaultAudioOutput = cpal::CpalOutput;
 // pub type DefaultAudioOutput = cubeb::CubebOutput;
 
 pub type DefaultAudioSink = <DefaultAudioOutput as AudioOutput>::Sink;
-use crate::audio::player::source::AudioSource;
+use crate::audio::source::AudioSource;
 
 // -------------------------------------------------------------------------------------------------
 
