@@ -4,6 +4,11 @@ import { listen } from '@tauri-apps/api/event'
 
 // -------------------------------------------------------------------------------------------------
 
+// Unique file reference to identify played files 
+export declare type FileId = number;
+
+// -------------------------------------------------------------------------------------------------
+
 // Initialize playback engine when the DOM loads
 invoke<void>('initialize_audio')
   .catch(err => {
@@ -12,28 +17,41 @@ invoke<void>('initialize_audio')
 
 // -------------------------------------------------------------------------------------------------
 
-// Abs path of currently playing back audio file, if any.
+let playingFiles = new Map<FileId, String>();
+
+// Ids and paths of currently playing back audio files, if any.
 // See also \function addPlaybackPositionEventListener 
-export async function playingAudioFile() {
-  return invoke<string>('playing_audio_file');
+export function playingAudioFiles(): {id: FileId, path: String}[] {
+  let ret = [];
+  for (let e of playingFiles) {
+    ret.push({id: e[0], path: e[1]})
+  }
+  return ret;
 }
 
 // -------------------------------------------------------------------------------------------------
 
 // Play back a single audio file from a database. This stops all previously playing files.
-export async function playAudioFile(dbPath: string, filePath: string): Promise<void> {
+export async function playAudioFile(dbPath: string, filePath: string): Promise<FileId> {
   let absPath = filePath;
   if (!await path.isAbsolute(absPath)) {
     absPath = await path.join(await path.dirname(dbPath), absPath);
   }
-  return invoke<void>('play_audio_file', { filePath: absPath });
+  // stop all playing files
+  for (let id of playingFiles.keys()) {
+    await invoke<void>('stop_audio_file', { fileId: id });
+  }
+  // start playback of the new file
+  let fileId = await invoke<FileId>('play_audio_file', { filePath: absPath });
+  playingFiles.set(fileId, filePath);
+  return fileId;
 }
 
 // -------------------------------------------------------------------------------------------------
 
 // register a new playback position change listener. returns a function to remove the listener again.
 export interface PlaybackPositionEvent {
-  path: String, 
+  file_id: FileId, 
   position: number 
 };
 
@@ -53,7 +71,7 @@ export function addPlaybackPositionEventListener(
 
 // register a new playback finished listener. returns a function to remove the listener again.
 export interface PlaybackFinishedEvent {
-  path: String 
+  file_id: FileId 
 };
 
 export function addPlaybackFinishedEventListener(
@@ -82,5 +100,6 @@ listen<PlaybackPositionEvent>("audio_playback_position", (event) => {
 });
 
 listen<PlaybackFinishedEvent>("audio_playback_finished", (event) => {
+  playingFiles.delete(event.payload.file_id);
   playbackFinishedListeners.forEach(l => l.func(event.payload));
 });
