@@ -46,8 +46,6 @@ impl Playback {
                 let player = AudioFilePlayer::new(audio_output.sink(), Some(event_sx), None);
                 // handle events from playback manager
                 Self::process_playback_manager_events(app_handle, event_rx);
-                // start playing
-                player.start();
                 // memorize player instance
                 *self.player.lock().unwrap() = Some(player);
                 Ok(())
@@ -69,9 +67,10 @@ impl Playback {
                             file_path: _,
                             position,
                         } => send_playback_position_event(&app_handle, file_id, position),
-                        FilePlaybackStatusMsg::EndOfFile {
+                        FilePlaybackStatusMsg::Stopped {
                             file_id,
                             file_path: _,
+                            end_of_file: _,
                         } => send_playback_finished_event(&app_handle, file_id),
                     },
                     Err(err) => {
