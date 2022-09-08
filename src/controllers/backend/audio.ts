@@ -51,7 +51,8 @@ export async function playAudioFile(dbPath: string, filePath: string): Promise<F
 
 // register a new playback position change listener. returns a function to remove the listener again.
 export interface PlaybackPositionEvent {
-  file_id: FileId, 
+  file_id: FileId,
+  file_path: string, 
   position: number 
 };
 
@@ -71,7 +72,8 @@ export function addPlaybackPositionEventListener(
 
 // register a new playback finished listener. returns a function to remove the listener again.
 export interface PlaybackFinishedEvent {
-  file_id: FileId 
+  file_id: FileId,
+  file_path: string,
 };
 
 export function addPlaybackFinishedEventListener(
