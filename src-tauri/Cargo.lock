@@ -37,12 +37,13 @@ dependencies = [
 [[package]]
 name = "afplay"
 version = "0.1.0"
-source = "git+https://github.com/emuell/afplay#3fef0fb21af652e27f4a8a5ba1ed5e92f10e5676"
+source = "git+https://github.com/emuell/afplay#14850133cc32700353f7ee7532b828ac982bd959"
 dependencies = [
  "audio_thread_priority",
  "cpal",
  "crossbeam-channel",
  "crossbeam-queue",
+ "lazy_static",
  "libsamplerate",
  "log",
  "rb",
