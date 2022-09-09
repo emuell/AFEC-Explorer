@@ -1,4 +1,5 @@
 use afplay::{
+    file::FilePlaybackOptions,
     playback::{PlaybackId, PlaybackStatusEvent},
     AudioFilePlayer, AudioOutput, DefaultAudioOutput,
 };
@@ -92,7 +93,10 @@ impl Playback {
 
         // start playing
         if let Some(player) = self.player.lock().unwrap().as_mut() {
-            let file_id = player.play_file(file_path.as_str())?;
+            let file_id = player.play_file_with_options(
+                file_path.as_str(),
+                FilePlaybackOptions::default().streamed(),
+            )?;
             log::info!("Decoded audio file has the id #{file_id}");
             Ok(file_id)
         } else {
