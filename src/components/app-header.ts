@@ -32,7 +32,7 @@ export class AppHeader extends MobxLitElement {
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    #header #repoPath.disabled {
+    #header #databasePath.disabled {
       color: var(--lumo-tint-10pct);
     } 
   `;
