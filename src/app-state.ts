@@ -5,6 +5,7 @@ import { Database } from './controllers/database';
 import { File } from './models/file';
 
 import { createPlot, PlotEntry } from './controllers/backend/plot';
+import { generateWaveform, WaveformPoint } from './controllers/backend/waveform';
 import { isRunningInTauriDev } from './controllers/tools';
 
 // -------------------------------------------------------------------------------------------------
@@ -32,6 +33,9 @@ class AppState {
   @mobx.observable
   selectedFilePath: string = "";
   
+  @mobx.observable
+  isGeneratingWaveform: number = 0;
+
   // map generation
   @mobx.observable
   isGeneratingMap: number = 0;
@@ -95,6 +99,25 @@ class AppState {
     }
     finally {
       --this.isLoadingFiles; 
+    }
+  }
+  
+  // calculate a mono waveform for selected file
+  async generateWaveform(width: number): Promise<WaveformPoint[]> {
+    if (! this.databasePath || this.databaseError || !this.selectedFilePath) {
+      return Promise.reject(new Error("No file selected"));
+    }
+
+    ++this.isGeneratingWaveform;
+    try {
+
+      let results = await generateWaveform(this.databasePath, this.selectedFilePath, width); 
+      --this.isGeneratingWaveform;
+      return results;
+
+    } catch (err) {
+      --this.isGeneratingWaveform;
+      throw err;
     }
   }
 

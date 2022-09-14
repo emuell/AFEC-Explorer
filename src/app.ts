@@ -7,6 +7,7 @@ import { appState } from './app-state';
 import './components/app-footer';
 import './components/app-header';
 import './components/file-map';
+import './components/file-waveview';
 import './components/file-list';
 import './components/error-message';
 
@@ -55,16 +56,24 @@ export class App extends MobxLitElement {
     #footer {
       height: auto;
     }
-    #split {
+    #main-split {
       height: 100%;
       width: 100vw;
     }
-    #filemap {
-      height: 40%;
+    #map {
+      height: 30%;
       min-height: 25%;
     }
-    #filelist {
-      height: 60%;
+    #lower-split {
+      height: 70%;
+      width: 100vw;
+    }
+    #waveview {
+      height: 25%;
+      min-height: 25%;
+    }
+    #file-list {
+      height: 75%;
       min-height: 25%;
     }
     #footer {
@@ -97,9 +106,12 @@ export class App extends MobxLitElement {
         <afec-app-header id="header" 
           .openDatabaseClick=${this._openDatabaseClick}>
         </afec-app-header>
-        <vaadin-split-layout id="split" orientation="vertical" theme="small">
-          <afec-file-map id="filemap"></afec-file-map>
-          <afec-file-list id="filelist"></afec-file-list>
+        <vaadin-split-layout id="main-split" orientation="vertical" theme="small">
+          <afec-file-map id="map"></afec-file-map>
+          <vaadin-split-layout id="lower-split" orientation="vertical" theme="small">
+            <afec-file-waveview id="waveview"></afec-file-waveview>
+            <afec-file-list id="file-list"></afec-file-list>
+          </vaadin-split-layout> 
         </vaadin-split-layout> 
         <afec-app-footer id="footer"></afec-app-footer>
       </vaadin-vertical-layout>
