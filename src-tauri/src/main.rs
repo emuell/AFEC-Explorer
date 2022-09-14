@@ -5,6 +5,8 @@
 
 mod audio;
 mod plot;
+mod waveform;
+
 use simplelog::*;
 
 // -------------------------------------------------------------------------------------------------
@@ -51,7 +53,8 @@ fn main() {
             audio::initialize_audio,
             audio::play_audio_file,
             audio::seek_audio_file,
-            audio::stop_audio_file
+            audio::stop_audio_file,
+            waveform::generate_waveform,
         ])
         .run(tauri::generate_context!())
         .expect("Error while running tauri application");
