@@ -41,6 +41,7 @@ export class FileList extends MobxLitElement {
   @state() 
   private _selectedFiles: File[] = [];  
   private _selectedItemsClicked = new Set<string>();
+  private _suppressFileSelection: boolean = false;
 
   @query("#grid")
   private _grid!: Grid<File> | null;
@@ -60,6 +61,26 @@ export class FileList extends MobxLitElement {
       () => this._searchString,
       () => this._fetchFiles(),
       { fireImmediately: false, delay: 1500 }
+    );
+
+    // sync internal file selection with appState
+    mobx.reaction(
+      () => appState.selectedFilePath,
+      (selectedFilePath) => {
+        // do thing if we're changing the selection
+        if (! this._suppressFileSelection) {
+          let selectedFileIndex = this._dataProvider.sortedFiles.findIndex(v => v.filename === selectedFilePath);
+          if (selectedFileIndex !== -1) {
+            let selectedFile = this._dataProvider.sortedFiles[selectedFileIndex];
+            this._selectedFiles = [selectedFile];
+            if (this._grid) {
+              this._grid.scrollToIndex(selectedFileIndex);
+            }
+          }
+
+        }
+      },
+      { fireImmediately: false }
     );
 
     // bind context for renderers which are using this
@@ -104,7 +125,13 @@ export class FileList extends MobxLitElement {
     const item = e.detail.value;
     // don't deselect selected itesm
     if (item) {
+      this._suppressFileSelection = true;
       this._selectedFiles = [item];
+      appState.selectedFilePath = item.filename;
+      this._suppressFileSelection = false;
+      if (appState.autoPlayFilesInList) {
+        this._playFile(item);
+      }
     }
     // double click handling
     const doubleClickItem = this._selectedFiles.length ?
@@ -136,7 +163,7 @@ export class FileList extends MobxLitElement {
     model: GridItemModel<File>
   ) {
     let name = model.item.filename;
-    if (name.startsWith("./")) {
+    if (name.startsWith("./") || name.startsWith(".\\")) {
       name = name.substring(2);
     }
     render(html`${name}`, root);
@@ -245,6 +272,19 @@ export class FileList extends MobxLitElement {
       margin: 0px 10px;
       padding: 4px 0px;
      }
+    #header .control {
+      margin-right: 12px;
+      padding: unset;
+      width: 6rem;
+    }
+    #header .label, #header label{
+      margin-right: 4px;
+      color: var(--lumo-tertiary-text-color);
+      font-size: var(--lumo-font-size-s);
+    }
+    #header label {
+      padding: unset;      
+    }
     #header #searchString {
       padding: unset;
       margin-left: auto;
@@ -281,6 +321,14 @@ export class FileList extends MobxLitElement {
     const header = html`
       <vaadin-horizontal-layout id="header">
         <strong id="title">FILES</strong>
+        <vaadin-checkbox
+          class="control" 
+          .checked=${appState.autoPlayFilesInList} 
+          @checked-changed=${(event: CustomEvent) => {
+            appState.autoPlayFilesInList = Boolean(event.detail.value); 
+          }}
+          label="Auto-Play">
+        </vaadin-checkbox>
         <vaadin-text-field 
           id="searchString"
           theme="small"

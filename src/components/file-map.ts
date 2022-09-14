@@ -113,9 +113,9 @@ export class FileMap extends MobxLitElement {
         <strong id="title">MAP</strong>
         <vaadin-checkbox
           class="control" 
-          .checked=${appState.autoPlayFiles} 
+          .checked=${appState.autoPlayFilesInGrid} 
           @checked-changed=${(event: CustomEvent) => {
-            appState.autoPlayFiles = Boolean(event.detail.value); 
+            appState.autoPlayFilesInGrid = Boolean(event.detail.value); 
           }}
           label="Auto-Play">
         </vaadin-checkbox>

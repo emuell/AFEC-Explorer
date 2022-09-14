@@ -28,6 +28,10 @@ class AppState {
   @mobx.observable
   isLoadingFiles: number = 0;
 
+  // selected file
+  @mobx.observable
+  selectedFilePath: string = "";
+  
   // map generation
   @mobx.observable
   isGeneratingMap: number = 0;
@@ -43,7 +47,10 @@ class AppState {
 
   // audio playback
   @mobx.observable
-  autoPlayFiles: boolean = true;
+  autoPlayFilesInGrid: boolean = true;
+  
+  @mobx.observable
+  autoPlayFilesInList: boolean = true; 
   
   // initialize app state
   constructor() {

@@ -96,7 +96,7 @@ export class FileMapPlot extends LitElement {
           `Class: ${closestPoint.classes.join(",")}<br>` + 
           `Categories: ${closestPoint.categories.join(",")}`);
       // Play the file
-      if (appState.autoPlayFiles && this._playingPointIndex != closestPoint.index) {
+      if (appState.autoPlayFilesInGrid && this._playingPointIndex != closestPoint.index) {
         this._playingPointIndex = closestPoint.index;
         playAudioFile(appState.databasePath, closestPoint.filename)
           .catch((err) => { 
@@ -120,16 +120,16 @@ export class FileMapPlot extends LitElement {
   ) {
     const closestPoint = this._findClosestPointInPlot(quadTree, event);
     if (closestPoint) {
-      if (this._selectedPointIndex != closestPoint.index) {
-        this._selectedPointIndex = closestPoint.index;
-        // redraw all points
-        this._drawPlotPoints(xScale, yScale, context, data);
-        // play file
-        playAudioFile(appState.databasePath, closestPoint.filename)
-          .catch((err) => { 
-            console.log("Audio playback failed: %s", err)
-          });
-      }
+      this._selectedPointIndex = closestPoint.index;
+      // redraw all points
+      this._drawPlotPoints(xScale, yScale, context, data);
+      // play file
+      playAudioFile(appState.databasePath, closestPoint.filename)
+        .catch((err) => { 
+          console.log("Audio playback failed: %s", err)
+        });
+      // and select it
+      appState.selectedFilePath = closestPoint.filename;
     } else {
       if (this._selectedPointIndex != -1) {
         this._selectedPointIndex = -1;
