@@ -37,14 +37,14 @@ dependencies = [
 [[package]]
 name = "afplay"
 version = "0.1.0"
-source = "git+https://github.com/emuell/afplay#14850133cc32700353f7ee7532b828ac982bd959"
+source = "git+https://github.com/emuell/afplay#a996c8e0e5f682155c7464d6ff09267b323289ef"
 dependencies = [
  "audio_thread_priority",
  "cpal",
  "crossbeam-channel",
  "crossbeam-queue",
  "lazy_static",
- "libsamplerate",
+ "libsamplerate-sys",
  "log",
  "rb",
  "symphonia",
@@ -411,6 +411,15 @@ dependencies = [
  "glob",
  "libc",
  "libloading",
+]
+
+[[package]]
+name = "cmake"
+version = "0.1.48"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e8ad8cef104ac57b68b89df3208164d228503abbdce70f6880ffa3d970e7443a"
+dependencies = [
+ "cc",
 ]
 
 [[package]]
@@ -1642,12 +1651,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "292a948cd991e376cf75541fe5b97a1081d713c618b4f1b9500f8844e49eb565"
 
 [[package]]
-name = "libsamplerate"
-version = "0.1.0"
+name = "libsamplerate-sys"
+version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bcbb68a750265482d1b1f70e3b4505da140c73960f8068726e2fd1ffb792c300"
+checksum = "28853b399f78f8281cd88d333b54a63170c4275f6faea66726a2bea5cca72e0d"
 dependencies = [
- "libc",
+ "cmake",
 ]
 
 [[package]]
