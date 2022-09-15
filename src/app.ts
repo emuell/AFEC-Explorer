@@ -109,8 +109,8 @@ export class App extends MobxLitElement {
         <vaadin-split-layout id="main-split" orientation="vertical" theme="small">
           <afec-file-map id="map"></afec-file-map>
           <vaadin-split-layout id="lower-split" orientation="vertical" theme="small">
-            <afec-file-waveview id="waveview"></afec-file-waveview>
             <afec-file-list id="file-list"></afec-file-list>
+            <afec-file-waveview id="waveview"></afec-file-waveview>
           </vaadin-split-layout> 
         </vaadin-split-layout> 
         <afec-app-footer id="footer"></afec-app-footer>

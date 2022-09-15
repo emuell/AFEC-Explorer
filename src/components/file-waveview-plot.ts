@@ -2,7 +2,13 @@ import { css, html, LitElement, PropertyValues } from 'lit'
 import { customElement, property, query } from 'lit/decorators.js'
 import { WaveformPoint } from '../controllers/backend/waveform';
 
+import path from 'path-browserify';
 import * as d3 from "d3";
+
+import { addPlaybackFinishedEventListener, addPlaybackPositionEventListener } 
+  from '../controllers/backend/audio';
+  
+import { appState } from '../app-state';
 
 // -------------------------------------------------------------------------------------------------
 
@@ -18,13 +24,19 @@ export class FileWaveViewPlot extends LitElement {
   // Elements
   @query("#waveform-container")
   private _waveformContainer!: HTMLDivElement | null;
-  
+ @query("#playback-container")
+  private _playbackContainer!: HTMLDivElement | null; 
+
   // Tools
   private _resizeObserver?: ResizeObserver = undefined;
+  private _removePlaybackPositionListener?: () => void = undefined;
+  private _removePlaybackFinishedListener?: () => void = undefined;
 
   // Selections 
   private _waveformSvg?: d3.Selection<SVGGElement, unknown, null, undefined> = undefined;
   private _waveformCanvas?: d3.Selection<HTMLCanvasElement, unknown, null, undefined> = undefined;
+  private _playbackSvg?: d3.Selection<SVGGElement, unknown, null, undefined> = undefined;
+  private _playbackCanvas?: d3.Selection<HTMLCanvasElement, unknown, null, undefined> = undefined;
 
   // Mutable state
   // private _playingPosition: number = -1;
@@ -32,10 +44,13 @@ export class FileWaveViewPlot extends LitElement {
   
   // Consts
   private readonly waveformColor = '#ff3585'
+  private readonly playbackPosColor = '#ffffff'
     
   private _currentPlotRect(): {
     left: number,
+    right: number,
     top: number,
+    bottom: number,
     outerWidth: number,
     outerHeight: number,
     innerWidth: number,
@@ -44,14 +59,14 @@ export class FileWaveViewPlot extends LitElement {
     const rect = this.getBoundingClientRect();
 
     // nest the waveform plot into axis
-    const margin = { top: 0, right: 0, bottom: 0, left: 0 };
+    const margin = { top: 0, right: 0, bottom: 10, left: 0 };
 
     const outerWidth = rect.width;
     const outerHeight = rect.height;
     const innerWidth = outerWidth - margin.left - margin.right;
     const innerHeight = outerHeight - margin.top - margin.bottom;
 
-    return { top: margin.top, left: margin.left, 
+    return { left: margin.left, right: margin.right, top: margin.top, bottom: margin.bottom, 
       outerWidth, outerHeight, innerWidth, innerHeight };
   }
 
@@ -65,7 +80,7 @@ export class FileWaveViewPlot extends LitElement {
     // TODO
   }
   
-  private _drawPlotPoints(
+  private _drawWaveform(
     xScale: d3.ScaleLinear<number, number, never>, 
     yScale: d3.ScaleLinear<number, number, never>, 
     context: CanvasRenderingContext2D, 
@@ -102,75 +117,75 @@ export class FileWaveViewPlot extends LitElement {
     context.restore();
   }
 
-  private _createWaveform(data: Array<WaveformPoint>) {
-    const initialRect = this._currentPlotRect();
+  private _drawPlaybackPosition(
+    xScale: d3.ScaleLinear<number, number, never>, 
+    yScale: d3.ScaleLinear<number, number, never>, 
+    context: CanvasRenderingContext2D,
+    position: number
+  ) {
+    context.save();
+
+    const scaleX = this._zoomTransform.rescaleX(xScale);
+    const scaleY = this._zoomTransform.rescaleY(yScale);
+
+    const plotRect = this._currentPlotRect();
+    context.clearRect(0, 0, plotRect.innerWidth, plotRect.innerHeight);
+
+    if (position >= 0) {
+      context.beginPath();
+      context.lineWidth = 1;
+      context.strokeStyle = this.playbackPosColor;
+      
+      const x = scaleX(position);
+      const y1 = scaleY(-1);
+      const y2 = scaleY(1);
+      context.moveTo(x, y1);
+      context.lineTo(x, y2);
+      context.stroke();
+    }
+
+    context.restore();
+  }
+
+  private _createWaveformContainer(data: Array<WaveformPoint>) {
+    const rect = this._currentPlotRect();
     const container = d3.select(this._waveformContainer!);
    
-    // reset state
-    this._zoomTransform = d3.zoomIdentity;
-
     // Init Scales
     let xScale = d3.scaleLinear()
-      .domain([0, data.length])
-      .range([0, initialRect.innerWidth]);
-    
-    let topBottomMargin = 0;
+      .domain([0, data[data.length - 1].time])
+      .range([0, rect.innerWidth]);
     let yScale = d3.scaleLinear()
-      .domain([d3.min(data, (d: any) => d.min), d3.max(data, (d: any) => d.max)])
-      .range([topBottomMargin, initialRect.innerHeight - topBottomMargin]);
+      .domain([-1, 1])
+      .range([0, rect.innerHeight]);
   
     // Create SVG node
     this._waveformSvg = container
       .append('svg:svg')
-      .attr('width', initialRect.outerWidth)
-      .attr('height', initialRect.outerHeight)
+      .attr('width', rect.outerWidth)
+      .attr('height', rect.outerHeight)
       .style('position', 'absolute')
       .attr('class', 'svg-plot')
       .append('g')
-      .attr('transform', `translate(${initialRect.left}, ${initialRect.top})`);
-
-    /* axis: TODO
-    const xAxis = d3.axisBottom(xScale).ticks(initialRect.innerWidth / 100, ".2f");
-    const yAxis = d3.axisLeft(yScale).ticks(4, ".2f");
-
+      .attr('transform', `translate(${rect.left}, ${rect.top})`);
+    
+    // Create X-Axis
     this._waveformSvg.append("g")
-      .attr("transform", `translate(0,${initialRect.innerHeight})`)
-      .call(xAxis)
+      .attr("transform", `translate(0,${rect.innerHeight - rect.bottom})`)
+      .call(d3.axisBottom(xScale).ticks(rect.innerWidth / 100, ".2f"))
       .call(g => g.select(".domain").remove())
       .call(g => g.selectAll(".tick line").clone()
-          .attr("y2", initialRect.top - initialRect.innerHeight)
+          .attr("y2", -rect.innerHeight)
           .attr("stroke-opacity", 0.1)
-      )
-      .call(g => g.append("text")
-          .attr("x", initialRect.innerWidth)
-          .attr("y", -4)
-          .attr("fill", "currentColor")
-          .attr("text-anchor", "end")
       );
-
-    this._waveformSvg.append("g")
-      .attr("transform", `translate(${initialRect.left},0)`)
-      .call(yAxis)
-      .call(g => g.select(".domain").remove())
-      .call(g => g.selectAll(".tick line").clone()
-          .attr("x2", initialRect.innerWidth - initialRect.left)
-          .attr("stroke-opacity", 0.1)
-      )
-      .call(g => g.append("text")
-          .attr("x", -initialRect.left)
-          .attr("y", 10)
-          .attr("fill", "currentColor")
-          .attr("text-anchor", "start")
-      );
-    */
 
     // Create Canvas overlay
     this._waveformCanvas = container
       .append('canvas')
-      .attr('width', initialRect.innerWidth)
-      .attr('height', initialRect.innerHeight)
-      .style('margin-left', initialRect.left + 'px')
-      .style('margin-top', initialRect.top + 'px')
+      .attr('width', rect.innerWidth)
+      .attr('height', rect.innerHeight)
+      .style('margin-left', rect.left + 'px')
+      .style('margin-top', rect.top + 'px')
       .style('position', 'absolute')
       .attr('class', 'canvas-plot');
 
@@ -184,67 +199,163 @@ export class FileWaveViewPlot extends LitElement {
       });
 
     // Draw initial content
-    this._drawPlotPoints(xScale, yScale, context, data);
+    this._drawWaveform(xScale, yScale, context, data);
+  }
 
-    // Track and forward size changes to SVG and Canvas
-    this._resizeObserver = new ResizeObserver(() => {
-      if (this._waveformSvg && this._waveformCanvas && context) {
-        // update canvas and svg size
-        const newRect = this._currentPlotRect();
-        this._waveformSvg
-          .attr('width', newRect.outerWidth)
-          .attr('height', newRect.outerHeight)
-          .attr('transform', `translate(${newRect.left}, ${newRect.top})`);
-        this._waveformCanvas
-          .attr('width', newRect.innerWidth)
-          .attr('height', newRect.innerHeight)
-          .style('margin-left', newRect.left + 'px')
-          .style('margin-top', newRect.top + 'px');
-        
-          // recalculate scales
-        xScale = d3.scaleLinear()
-          .domain([0, d3.max(data, (d: any) => d.time)])
-          .range([0, newRect.innerWidth]);
-        yScale = d3.scaleLinear()
-          .domain([d3.min(data, (d: any) => d.min), d3.max(data, (d: any) => d.max)])
-          .range([topBottomMargin, newRect.innerHeight - topBottomMargin]); 
-        
-          // redraw all points
-        this._drawPlotPoints(xScale, yScale, context, data);
+  private _createPlaybackContainer(data: Array<WaveformPoint>) {
+    const rect = this._currentPlotRect();
+    const container = d3.select(this._playbackContainer!);
+   
+    // Init Scales
+    let xScale = d3.scaleLinear()
+      .domain([0, data[data.length - 1].time])
+      .range([0, rect.innerWidth]);
+    let yScale = d3.scaleLinear()
+      .domain([-1, 1])
+      .range([0, rect.innerHeight]);
+  
+    // Create SVG node
+    this._playbackSvg = container
+      .append('svg:svg')
+      .attr('width', rect.outerWidth)
+      .attr('height', rect.outerHeight)
+      .style('position', 'absolute')
+      .attr('class', 'svg-plot')
+      .append('g')
+      .attr('transform', `translate(${rect.left}, ${rect.top})`);
+   
+    // add file name label
+    let displayName = appState.selectedFilePath;
+    if (displayName.startsWith("./") || displayName.startsWith("\\.")) {
+      displayName = displayName.substring(2);
+    }
+    this._playbackSvg
+      .append("g")
+      .call(g => g.append("text")
+          .attr("x", rect.innerWidth - 8)
+          .attr("y", 20)
+          .attr("fill", "currentColor")
+          .attr("text-anchor", "end")
+          .attr("font-size", 12)
+          .text(displayName)
+      ); 
+
+    // Create Canvas overlay
+    this._playbackCanvas = container
+      .append('canvas')
+      .attr('width', rect.innerWidth)
+      .attr('height', rect.innerHeight)
+      .style('margin-left', rect.left + 'px')
+      .style('margin-top', rect.top + 'px')
+      .style('position', 'absolute')
+      .attr('class', 'canvas-plot');
+
+    // Create drawing context
+    const context = this._playbackCanvas.node()!.getContext('2d')!;
+
+    // listen to file playback position changes
+    let renderedFilePath = appState.selectedFileAbsPath;
+    this._removePlaybackPositionListener = addPlaybackPositionEventListener((event) => {
+        if (path.normalize(renderedFilePath) == path.normalize(event.file_path)) {
+          this._drawPlaybackPosition(xScale, yScale, context, event.position);
+        }
       }
+    );
+    this._removePlaybackFinishedListener = addPlaybackFinishedEventListener((event) => {
+        if (path.normalize(renderedFilePath) == path.normalize(event.file_path)) {
+          this._drawPlaybackPosition(xScale, yScale, context, -1);
+        }
+      }
+    );
+  }
+  
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+
+    // disconnect all listeners 
+    if (this._removePlaybackPositionListener) {
+      this._removePlaybackPositionListener();
+      this._removePlaybackPositionListener = undefined;
+    }
+    if (this._removePlaybackFinishedListener) {
+      this._removePlaybackFinishedListener();
+      this._removePlaybackFinishedListener = undefined;
+    }
+    if (this._resizeObserver) {
+      this._resizeObserver.disconnect();
+      this._resizeObserver = undefined;
+    }
+  }
+
+  updated(changedProperties: PropertyValues): void {
+    super.updated(changedProperties);
+
+    // remove all listeners 
+    if (this._removePlaybackPositionListener) {
+      this._removePlaybackPositionListener();
+      this._removePlaybackPositionListener = undefined;
+    }
+    if (this._removePlaybackFinishedListener) {
+      this._removePlaybackFinishedListener();
+      this._removePlaybackFinishedListener = undefined;
+    }
+    if (this._resizeObserver) {
+      this._resizeObserver.disconnect();
+      this._resizeObserver = undefined;
+    }
+    
+    // clear all previous content
+    function removeAllChildNodes(parent: HTMLElement) {
+      while (parent.firstChild) {
+        parent.removeChild(parent.firstChild);
+      }
+    }
+    if (this._waveformSvg && this._waveformCanvas) {
+      removeAllChildNodes(this._waveformContainer!);
+      this._waveformSvg = undefined;
+      this._waveformCanvas = undefined;
+    }
+    if (this._playbackSvg && this._playbackCanvas) {
+      removeAllChildNodes(this._playbackContainer!);
+      this._playbackSvg = undefined;
+      this._playbackCanvas = undefined;
+    } 
+
+    // reset state
+    this._zoomTransform = d3.zoomIdentity;
+    
+    // create and render waveform container
+    this._createWaveformContainer(this.data);
+    // create and render playback pos
+    this._createPlaybackContainer(this.data);
+
+    // rebuild everything on size changes
+    let isInitialUpdate = true;
+    this._resizeObserver = new ResizeObserver(() => {
+      if (! isInitialUpdate) {
+        this.requestUpdate();
+      }
+      isInitialUpdate = false;
     });
     this._resizeObserver.observe(this);
   }
 
-  protected updated(changedProperties: PropertyValues): void {
-    super.updated(changedProperties);
-
-    // clear all previous content - if any
-    if (this._waveformSvg && this._waveformCanvas) {
-      this._waveformSvg.remove();
-      this._waveformSvg = undefined;
-      this._waveformCanvas.remove();
-      this._waveformCanvas = undefined;
-    }
-
-    // remove existing resize observers
-    if (this._resizeObserver) {
-      this._resizeObserver.unobserve(this);
-      this._resizeObserver = undefined;
-    }
-
-    // render waveform
-    this._createWaveform(this.data);
-  }
-
   static styles = css`
+    :host {
+      position: relative;
+      overflow: hidden;
+    }
     #waveform-container {
+      position: absolute;        
 			width: 100%; 
       height: 100%;
 		}
     #playback-container {
-		  position: absolute;        
-			display: inline-block;
+      position: absolute;
+      left: 0;
+      right: 0;
+			height: 100%;
+		  width: 100%; 
 		  pointer-events: none;
 			z-index: 1;
 		}

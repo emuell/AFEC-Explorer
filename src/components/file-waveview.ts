@@ -16,7 +16,7 @@ import './spinner';
 
 // -------------------------------------------------------------------------------------------------
 
-// Map layout.
+// Selected file's waveform plot layout 
 
 @customElement('afec-file-waveview')
 export class FileWaveView extends MobxLitElement {
@@ -69,24 +69,6 @@ export class FileWaveView extends MobxLitElement {
       flex-direction: column;
       justify-content: start
     }
-    #header {
-      align-items: center; 
-      background: var(--lumo-shade-10pct);
-      padding: 4px;
-      height: 37.5px;
-    }
-    #header #filePath {
-      margin-left: 10px;
-      margin-right: 12px;
-      padding: 4px 0px;
-      color: var(--lumo-tint);
-      font-size: smaller;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    #header #filePath.disabled {
-      color: var(--lumo-tint-10pct);
-    } 
     #loading {
       flex: 1 1 auto;
       align-items: center;
@@ -101,22 +83,6 @@ export class FileWaveView extends MobxLitElement {
   `;
 
   render() {
-    let selectedFilePath = appState.selectedFilePath;
-    if (selectedFilePath) {
-      if (selectedFilePath.startsWith("./") || selectedFilePath.startsWith(".\\")) {
-        selectedFilePath = selectedFilePath.substring(2);
-      }
-    }
-    else {
-      selectedFilePath = "No file selected";
-    }
-    const header = html`
-      <vaadin-horizontal-layout id="header">
-        <div id="filePath" class="${!appState.selectedFilePath? "disabled" : ""}">
-          ${selectedFilePath}
-        </div>
-      </vaadin-horizontal-layout>
-    `;
     // error
     if (this._fetchError && appState.isGeneratingWaveform === 0) {
       let errorMessage = this._fetchError;
@@ -124,7 +90,6 @@ export class FileWaveView extends MobxLitElement {
         errorMessage = "Failed to fetch waveform: " + errorMessage;
       }
       return html`
-        ${header}
         <afec-error-message id="error"
           type=${appState.databasePath && appState.selectedFilePath ? "error" : "info"}
           message=${errorMessage}>
@@ -134,7 +99,6 @@ export class FileWaveView extends MobxLitElement {
     // loading
     if (appState.isGeneratingWaveform > 0 || appState.isLoadingDatabase > 0) {
       return html`
-        ${header}
         <vaadin-horizontal-layout id="loading">
           <afec-spinner size="24px"></afec-spinner>
         </vaadin-horizontal-layout>
@@ -142,7 +106,6 @@ export class FileWaveView extends MobxLitElement {
     }
     // map
     return html`
-      ${header}
       <afec-file-waveview-plot id="plot" .data=${this._waveformData}></afec-file-waveview-plot>
     `;
   }
