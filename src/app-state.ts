@@ -1,8 +1,8 @@
 import * as mobx from 'mobx';
-
-import { Database } from './controllers/database';
+import path from 'path-browserify';
 
 import { File } from './models/file';
+import { Database } from './controllers/database';
 
 import { createPlot, PlotEntry } from './controllers/backend/plot';
 import { generateWaveform, WaveformPoint } from './controllers/backend/waveform';
@@ -101,7 +101,23 @@ class AppState {
       --this.isLoadingFiles; 
     }
   }
-  
+
+  // abs path of the currently selected file, if any
+  @mobx.computed
+  get selectedFileAbsPath() {
+    let filePath = this.selectedFilePath;
+    if (!filePath) {
+      return "";
+    }
+    let dbPath = this.databasePath;
+    let absPath = path.normalize(filePath.replace(/\\/g, "/"));
+    if (! path.isAbsolute(absPath)) {
+      let dirname = path.dirname(dbPath.replace(/\\/g, "/"));
+      absPath = path.join(dirname, absPath);
+    } 
+    return absPath;
+  }
+
   // calculate a mono waveform for selected file
   async generateWaveform(width: number): Promise<WaveformPoint[]> {
     if (! this.databasePath || this.databaseError || !this.selectedFilePath) {
