@@ -16,7 +16,7 @@ pub fn generate_waveform(
     file_path: String,
     resolution: usize,
 ) -> Result<Vec<WaveformPoint>, String> {
-    match afplay::generate_waveform(file_path.as_str(), resolution) {
+    match afplay::generate_mono_waveform_from_file(file_path.as_str(), resolution) {
         Ok(data) => Ok(data
             .iter()
             .map(|v| WaveformPoint {

@@ -51,7 +51,7 @@ export class FileWaveView extends MobxLitElement {
     if (this._waveviewPlot) {
       neededWidth = this._waveviewPlot.clientWidth;
     }
-    let upscaleFactor = 1.25;
+    let upscaleFactor = 2;
     appState.generateWaveform(neededWidth * upscaleFactor)
       .then((entries) => {
         this._waveformData = entries;

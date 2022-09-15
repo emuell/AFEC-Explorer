@@ -37,7 +37,7 @@ dependencies = [
 [[package]]
 name = "afplay"
 version = "0.1.0"
-source = "git+https://github.com/emuell/afplay#a996c8e0e5f682155c7464d6ff09267b323289ef"
+source = "git+https://github.com/emuell/afplay#86c9444052864421185592327c443bbc3718b96c"
 dependencies = [
  "audio_thread_priority",
  "cpal",
