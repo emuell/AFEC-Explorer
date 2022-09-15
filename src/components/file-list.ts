@@ -67,7 +67,7 @@ export class FileList extends MobxLitElement {
     mobx.reaction(
       () => appState.selectedFilePath,
       (selectedFilePath) => {
-        // do thing if we're changing the selection
+        // do nothing if we're changing the selection
         if (! this._suppressFileSelection) {
           let selectedFileIndex = this._dataProvider.sortedFiles.findIndex(v => v.filename === selectedFilePath);
           if (selectedFileIndex !== -1) {
@@ -76,8 +76,9 @@ export class FileList extends MobxLitElement {
             if (this._grid) {
               this._grid.scrollToIndex(selectedFileIndex);
             }
+          } else {
+            this._selectedFiles = [];
           }
-
         }
       },
       { fireImmediately: false }
