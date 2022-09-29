@@ -1,3 +1,5 @@
+use afplay::{source::file::preloaded::PreloadedFileSource, AudioSource, FilePlaybackOptions};
+
 // -------------------------------------------------------------------------------------------------
 
 #[derive(serde::Serialize, Debug, Default)]
@@ -16,15 +18,23 @@ pub fn generate_waveform(
     file_path: String,
     resolution: usize,
 ) -> Result<Vec<WaveformPoint>, String> {
-    match afplay::generate_mono_waveform_from_file(file_path.as_str(), resolution) {
-        Ok(data) => Ok(data
-            .iter()
-            .map(|v| WaveformPoint {
-                time: v.time.as_secs_f32(),
-                min: v.min,
-                max: v.max,
-            })
-            .collect()),
-        Err(err) => Err(err.to_string()),
-    }
+    // decode sample file
+    let file_source =
+        PreloadedFileSource::new(file_path.as_str(), None, FilePlaybackOptions::default())
+            .map_err(|e| e.to_string())?;
+    // generate waveform
+    let data = afwaveplot::mixed_down::waveform_from_buffer(
+        file_source.buffer(),
+        file_source.channel_count(),
+        file_source.sample_rate(),
+        resolution,
+    );
+    Ok(data
+        .iter()
+        .map(|v| WaveformPoint {
+            time: v.time.as_secs_f32(),
+            min: v.min,
+            max: v.max,
+        })
+        .collect())
 }

@@ -1,9 +1,8 @@
 use afplay::{
-    file::FilePlaybackOptions,
-    playback::{PlaybackId, PlaybackStatusEvent},
-    AudioFilePlayer, AudioOutput, DefaultAudioOutput,
+    AudioFilePlaybackId, AudioFilePlaybackStatusEvent, AudioFilePlayer, AudioOutput,
+    DefaultAudioOutput, FilePlaybackOptions,
 };
-use std::sync::Mutex;
+use std::{sync::Mutex, time::Duration};
 use tauri::Manager;
 
 // -------------------------------------------------------------------------------------------------
@@ -56,17 +55,17 @@ impl Playback {
 
     fn process_playback_manager_events(
         app_handle: tauri::AppHandle,
-        event_rx: crossbeam_channel::Receiver<PlaybackStatusEvent>,
+        event_rx: crossbeam_channel::Receiver<AudioFilePlaybackStatusEvent>,
     ) {
         std::thread::Builder::new()
             .name("audio_playback_events".to_string())
             .spawn(move || loop {
                 match event_rx.recv() {
                     Ok(event) => match event {
-                        PlaybackStatusEvent::Position { id, path, position } => {
+                        AudioFilePlaybackStatusEvent::Position { id, path, position } => {
                             send_playback_position_event(&app_handle, id, path, position)
                         }
-                        PlaybackStatusEvent::Stopped {
+                        AudioFilePlaybackStatusEvent::Stopped {
                             id,
                             path,
                             exhausted: _,
@@ -81,7 +80,10 @@ impl Playback {
             .unwrap();
     }
 
-    pub fn play(&self, file_path: String) -> Result<PlaybackId, Box<dyn std::error::Error>> {
+    pub fn play(
+        &self,
+        file_path: String,
+    ) -> Result<AudioFilePlaybackId, Box<dyn std::error::Error>> {
         log::info!("Decoding audio file for playback: '{file_path}'");
 
         // handle initialize errors
@@ -93,9 +95,11 @@ impl Playback {
 
         // start playing
         if let Some(player) = self.player.lock().unwrap().as_mut() {
-            let file_id = player.play_file_with_options(
+            let file_id = player.play_file(
                 file_path.as_str(),
-                FilePlaybackOptions::default().streamed(),
+                FilePlaybackOptions::default()
+                    .streamed()
+                    .playback_pos_emit_rate(Duration::from_secs_f64(1.0 / 30.0)),
             )?;
             log::info!("Decoded audio file has the id #{file_id}");
             Ok(file_id)
@@ -106,7 +110,7 @@ impl Playback {
 
     pub fn seek(
         &self,
-        file_id: PlaybackId,
+        file_id: AudioFilePlaybackId,
         seek_pos_seconds: f64,
     ) -> Result<(), Box<dyn std::error::Error>> {
         log::info!("Seeking audio file #{file_id}");
@@ -129,7 +133,7 @@ impl Playback {
         }
     }
 
-    pub fn stop(&self, file_id: PlaybackId) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn stop(&self, file_id: AudioFilePlaybackId) -> Result<(), Box<dyn std::error::Error>> {
         log::info!("Stopping audio file #{file_id}");
 
         // handle initialize errors
@@ -167,14 +171,14 @@ pub fn initialize_audio(
 pub fn play_audio_file(
     file_path: String,
     playback: tauri::State<Playback>,
-) -> Result<PlaybackId, String> {
+) -> Result<AudioFilePlaybackId, String> {
     playback.play(file_path).map_err(|err| err.to_string())
 }
 
 // Seek given audio file. Nothing happens when the file isn't playing
 #[tauri::command]
 pub fn seek_audio_file(
-    file_id: PlaybackId,
+    file_id: AudioFilePlaybackId,
     seek_pos_seconds: f64,
     playback: tauri::State<Playback>,
 ) -> Result<(), String> {
@@ -186,7 +190,7 @@ pub fn seek_audio_file(
 // Stop given audio file. Nothing happens when the file isn't playing
 #[tauri::command]
 pub fn stop_audio_file(
-    file_id: PlaybackId,
+    file_id: AudioFilePlaybackId,
     playback: tauri::State<Playback>,
 ) -> Result<(), String> {
     playback.stop(file_id).map_err(|err| err.to_string())
@@ -195,13 +199,13 @@ pub fn stop_audio_file(
 // Send a playback position event to the frontend
 pub fn send_playback_position_event(
     app_handle: &tauri::AppHandle,
-    file_id: PlaybackId,
+    file_id: AudioFilePlaybackId,
     file_path: String,
     position: std::time::Duration,
 ) {
     #[derive(Clone, serde::Serialize)]
     struct PlaybackPositionEvent {
-        file_id: PlaybackId,
+        file_id: AudioFilePlaybackId,
         file_path: String,
         position: f64,
     }
@@ -221,12 +225,12 @@ pub fn send_playback_position_event(
 
 pub fn send_playback_finished_event(
     app_handle: &tauri::AppHandle,
-    file_id: PlaybackId,
+    file_id: AudioFilePlaybackId,
     file_path: String,
 ) {
     #[derive(Clone, serde::Serialize)]
     struct PlaybackFinishedEvent {
-        file_id: PlaybackId,
+        file_id: AudioFilePlaybackId,
         file_path: String,
     }
     if let Err(error) = app_handle.emit_all(
