@@ -7,7 +7,13 @@ This repository contains an experimental GUI for browsing [AFEC](https://github.
 
 - Shows high-level features of an AFEC high-level database in a grid.
 - Shows a 2d t-SNE cluster from the afec high-level classification data.
-- Hovering or clicking on a file in the table or map plays the audio file.
+- Hovering or clicking on a file in the grid or t-SNE map plays the audio file.
+- Simple file name based searching / filtering.
+
+*Please note:* The explorer only consumes AFEC database file - it does not generate them. 
+You can generate `afec.db` files with [AFEC](https://github.com/emuell/AFEC)'s crawler app first.
+
+![Screenshot](./screenshot.png "AFEC Explorer")
 
 
 ## Development
