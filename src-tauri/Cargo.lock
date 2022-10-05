@@ -28,6 +28,7 @@ dependencies = [
  "serde_json",
  "simplelog",
  "sqlite",
+ "static_assertions",
  "string-error",
  "tauri",
  "tauri-build",
@@ -3228,6 +3229,12 @@ checksum = "dbe866e1e51e8260c9eed836a042a5e7f6726bb2b411dffeaa712e19c388f23b"
 dependencies = [
  "loom",
 ]
+
+[[package]]
+name = "static_assertions"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "stdweb"

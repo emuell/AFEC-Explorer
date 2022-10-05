@@ -1,5 +1,6 @@
 use super::database;
 use rstats::Vecg;
+use static_assertions::const_assert;
 use string_error::*;
 
 // -------------------------------------------------------------------------------------------------
@@ -84,10 +85,11 @@ pub fn create_plot(
     for point in points {
         // pop row entry, so the compiler can reuse/move existing row values
         let row = rows.pop_front().unwrap();
+        const_assert!(NO_DIMS == 2); // for "get_unchecked" use below
         vec.push(PlotEntry {
             filename: row.filename,
-            x: point[0],
-            y: point[1],
+            x: unsafe { *point.get_unchecked(0) },
+            y: unsafe { *point.get_unchecked(1) },
             categories: row.categories,
             classes: row.classes,
         });

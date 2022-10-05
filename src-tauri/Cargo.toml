@@ -15,6 +15,7 @@ tauri-build = { version = "1.0.4", features = [] }
 [dependencies]
 
 # common
+static_assertions = { version = "1.1.0" }
 serde_json = "^1.0"
 serde = { version = "^1.0", features = ["derive"] }
 string-error = "^0.1"
