@@ -19,12 +19,16 @@ pub fn generate_waveform(
     resolution: usize,
 ) -> Result<Vec<WaveformPoint>, String> {
     // decode sample file
-    let file_source =
-        PreloadedFileSource::new(file_path.as_str(), None, FilePlaybackOptions::default())
-            .map_err(|e| e.to_string())?;
+    let file_source = PreloadedFileSource::new(
+        file_path.as_str(),
+        None,
+        FilePlaybackOptions::default(),
+        44100,
+    )
+    .map_err(|e| e.to_string())?;
     // generate waveform
     let data = afwaveplot::mixed_down::waveform_from_buffer(
-        file_source.buffer(),
+        &file_source.buffer(),
         file_source.channel_count(),
         file_source.sample_rate(),
         resolution,

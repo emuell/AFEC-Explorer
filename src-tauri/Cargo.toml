@@ -30,10 +30,10 @@ tauri-plugin-window-state = { version = "^0.1" }
 tauri-plugin-sqlite = { git = "https://github.com/lzdyes/tauri-plugin-sqlite", tag = "v0.1.1" }
 
 # audio
-# afplay = { path = "../../Crates/afplay" }
-# afwaveplot = { path = "../../Crates/afwaveplot" }
-afplay = { git = "https://github.com/emuell/afplay" }
-afwaveplot = { git = "https://github.com/emuell/afwaveplot" }
+afplay = { path = "../../Crates/afplay" }
+afwaveplot = { path = "../../Crates/afwaveplot" }
+# afplay = { git = "https://github.com/emuell/afplay" }
+# afwaveplot = { git = "https://github.com/emuell/afwaveplot" }
 
 # tsne
 sqlite = "^0.26"
