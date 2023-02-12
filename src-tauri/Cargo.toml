@@ -25,7 +25,7 @@ crossbeam-channel = { version = "0.5" }
 
 #tauri
 # NB: set features = ["api-all", "devtools"] to enable dev tools in release builds 
-tauri = { version = "^1.0", features = ["api-all"] }
+tauri = { version = "1.2.3", features = ["api-all"] }
 tauri-plugin-window-state = { version = "^0.1" }
 tauri-plugin-sqlite = { git = "https://github.com/lzdyes/tauri-plugin-sqlite", tag = "v0.1.1" }
 
