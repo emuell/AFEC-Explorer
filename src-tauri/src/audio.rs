@@ -1,6 +1,6 @@
 use afplay::{
     AudioFilePlaybackId, AudioFilePlaybackStatusEvent, AudioFilePlayer, AudioOutput,
-    DefaultAudioOutput, FilePlaybackOptions,
+    DefaultAudioOutput, FilePlaybackOptions, AudioFilePlaybackStatusContext,
 };
 use std::{sync::Mutex, time::Duration};
 use tauri::Manager;
@@ -62,14 +62,15 @@ impl Playback {
             .spawn(move || loop {
                 match event_rx.recv() {
                     Ok(event) => match event {
-                        AudioFilePlaybackStatusEvent::Position { id, path, position } => {
-                            send_playback_position_event(&app_handle, id, path, position)
+                        AudioFilePlaybackStatusEvent::Position { id, path, position, context } => {
+                            send_playback_position_event(&app_handle, id, (*path).to_string(), position, context)
                         }
                         AudioFilePlaybackStatusEvent::Stopped {
                             id,
                             path,
                             exhausted: _,
-                        } => send_playback_finished_event(&app_handle, id, path),
+                            context
+                        } => send_playback_finished_event(&app_handle, id, (*path).to_string(), context),
                     },
                     Err(err) => {
                         log::info!("Playback event channel closed: '{err}'");
@@ -202,6 +203,7 @@ pub fn send_playback_position_event(
     file_id: AudioFilePlaybackId,
     file_path: String,
     position: std::time::Duration,
+    _context: Option<AudioFilePlaybackStatusContext>
 ) {
     #[derive(Clone, serde::Serialize)]
     struct PlaybackPositionEvent {
@@ -227,6 +229,7 @@ pub fn send_playback_finished_event(
     app_handle: &tauri::AppHandle,
     file_id: AudioFilePlaybackId,
     file_path: String,
+    _context: Option<AudioFilePlaybackStatusContext>
 ) {
     #[derive(Clone, serde::Serialize)]
     struct PlaybackFinishedEvent {

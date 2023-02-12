@@ -25,7 +25,7 @@ fn main() {
             match (|| -> Result<Box<WriteLogger<std::fs::File>>, Box<dyn std::error::Error>> {
                 let log_path = app
                     .path_resolver()
-                    .log_dir()
+                    .app_log_dir()
                     .ok_or_else(|| string_error::static_err("Failed to resolve log directory"))?;
                 std::fs::create_dir_all(log_path.as_path())?;
                 let mut log_file_path = log_path;
