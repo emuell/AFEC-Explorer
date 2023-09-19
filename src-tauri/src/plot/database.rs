@@ -1,5 +1,6 @@
 use sqlite::Connection;
 use std::collections::VecDeque;
+use anyhow::anyhow;
 
 // -------------------------------------------------------------------------------------------------
 
@@ -16,7 +17,7 @@ pub struct TsneFeatureRow {
 
 pub fn get_tsne_features(
     path: String,
-) -> Result<VecDeque<TsneFeatureRow>, Box<dyn std::error::Error>> {
+) -> anyhow::Result<VecDeque<TsneFeatureRow>> {
     let connection = Connection::open(&path)?;
     let column_names = [
         "filename",
@@ -42,9 +43,9 @@ pub fn get_tsne_features(
             let column_name = *column_names.get(i).unwrap();
             let value = row
                 .get(i)
-                .ok_or_else(|| format!("Failed to fetch column '{}' value", column_name))?;
+                .ok_or_else(|| anyhow!("Failed to fetch column '{}' value", column_name))?;
             let value_string = value.as_string().ok_or_else(|| {
-                format!("Failed to convert column '{}' string value", column_name)
+                anyhow!("Failed to convert column '{}' string value", column_name)
             })?;
             match column_name {
                 "filename" => feature_row.filename = Box::from(value_string),
@@ -55,7 +56,7 @@ pub fn get_tsne_features(
                     feature_row.data.append(&mut array);
                 }
                 _ => {
-                    return Err(format!("Unexpected column name {}", column_name).into());
+                    return Err(anyhow!("Unexpected column name {}", column_name));
                 }
             };
         }

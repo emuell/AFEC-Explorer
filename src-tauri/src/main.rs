@@ -7,6 +7,7 @@ mod audio;
 mod plot;
 mod waveform;
 
+use anyhow::anyhow;
 use simplelog::*;
 
 // -------------------------------------------------------------------------------------------------
@@ -26,7 +27,7 @@ fn main() {
                 let log_path = app
                     .path_resolver()
                     .app_log_dir()
-                    .ok_or_else(|| string_error::static_err("Failed to resolve log directory"))?;
+                    .ok_or_else(|| anyhow!("Failed to resolve log directory"))?;
                 std::fs::create_dir_all(log_path.as_path())?;
                 let mut log_file_path = log_path;
                 log_file_path.push("App.log");

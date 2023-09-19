@@ -1,7 +1,7 @@
 use super::database;
+use anyhow::{anyhow, ensure, bail};
 use rstats::Vecg;
 use static_assertions::const_assert;
-use string_error::*;
 
 // -------------------------------------------------------------------------------------------------
 
@@ -22,28 +22,25 @@ pub fn create_plot(
     theta: f32,
     perplexity: f32,
     epochs: usize,
-) -> Result<Vec<PlotEntry>, Box<dyn std::error::Error>> {
+) -> anyhow::Result<Vec<PlotEntry>> {
     log::info!("Creating t-SNE plot for db: {db_path} theta: {theta} perplexity: {perplexity} epochs: {epochs}");
 
     // validate args
-    if !(0.0..1.0).contains(&theta) {
-        return Err(into_err(format!(
-            "Invalid TSNE arg: 'theta' must be in (0, 1)): {}",
-            theta
-        )));
-    }
-    if !(5.0..=50.0).contains(&perplexity) {
-        return Err(into_err(format!(
-            "Invalid TSNE arg: 'perplexity' must be in [5, 50]): {}",
-            perplexity
-        )));
-    }
-    if !(1..=10_000).contains(&epochs) {
-        return Err(into_err(format!(
-            "Invalid TSNE arg: 'epochs' must be in [1, 10000] {}",
-            epochs
-        )));
-    }
+    ensure!(
+        (0.0..1.0).contains(&theta),
+        "Invalid TSNE arg: 'theta' must be in (0, 1)): {}",
+        theta
+    );
+    ensure!(
+        (5.0..=50.0).contains(&perplexity),
+        "Invalid TSNE arg: 'perplexity' must be in [5, 50]): {}",
+        perplexity
+    );
+    ensure!(
+        (1..=10_000).contains(&epochs),
+        "Invalid TSNE arg: 'epochs' must be in [1, 10000] {}",
+        epochs
+    );
 
     // read database input
     let mut rows = database::get_tsne_features(db_path)?;
@@ -65,7 +62,7 @@ pub fn create_plot(
 
     // avoid that bhtsne panics: see check_perplexity in mod.rs
     if samples.len() as f32 - 1.0 < 3.0 * perplexity {
-        return Err(new_err("Can't generate map: too litte samples"));
+        bail!("Can't generate map: too litte samples");
     }
 
     let mut tsne = bhtsne::tSNE::new(&samples);

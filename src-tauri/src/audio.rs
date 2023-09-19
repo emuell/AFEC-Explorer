@@ -2,6 +2,7 @@ use afplay::{
     AudioFilePlaybackId, AudioFilePlaybackStatusEvent, AudioFilePlayer, AudioOutput,
     DefaultAudioOutput, FilePlaybackOptions, AudioFilePlaybackStatusContext,
 };
+use anyhow::anyhow;
 use std::{sync::Mutex, time::Duration};
 use tauri::Manager;
 
@@ -26,10 +27,10 @@ impl Playback {
     pub fn initialize(
         &self,
         app_handle: tauri::AppHandle,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> anyhow::Result<()> {
         // check if we already got initialized
         if self.player.lock().unwrap().is_some() {
-            return Err(string_error::new_err(
+            return Err(anyhow!(
                 "Audio playback already is initialized",
             ));
         }
@@ -38,7 +39,7 @@ impl Playback {
             Err(err) => {
                 // memorize error
                 *self.init_error.lock().unwrap() = Some(err.to_string());
-                Err(string_error::new_err(err.to_string().as_str()))
+                Err(anyhow!(err.to_string()))
             }
             Ok(audio_output) => {
                 // create player
@@ -84,12 +85,12 @@ impl Playback {
     pub fn play(
         &self,
         file_path: String,
-    ) -> Result<AudioFilePlaybackId, Box<dyn std::error::Error>> {
+    ) -> anyhow::Result<AudioFilePlaybackId> {
         log::info!("Decoding audio file for playback: '{file_path}'");
 
         // handle initialize errors
         if self.init_error.lock().unwrap().is_some() {
-            return Err(string_error::new_err(
+            return Err(anyhow!(
                 "Can't play file: Audio playback failed to intialize.",
             ));
         }
@@ -105,7 +106,7 @@ impl Playback {
             log::info!("Decoded audio file has the id #{file_id}");
             Ok(file_id)
         } else {
-            Err(string_error::new_err("Playback not initialized"))
+            Err(anyhow!("Playback not initialized"))
         }
     }
 
@@ -113,12 +114,12 @@ impl Playback {
         &self,
         file_id: AudioFilePlaybackId,
         seek_pos_seconds: f64,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> anyhow::Result<()> {
         log::info!("Seeking audio file #{file_id}");
 
         // handle initialize errors
         if self.init_error.lock().unwrap().is_some() {
-            return Err(string_error::new_err(
+            return Err(anyhow!(
                 "Can't seek file: Audio playback failed to intialize.",
             ));
         }
@@ -130,16 +131,16 @@ impl Playback {
             )?;
             Ok(())
         } else {
-            Err(string_error::new_err("Playback not initialized"))
+            Err(anyhow!("Playback not initialized"))
         }
     }
 
-    pub fn stop(&self, file_id: AudioFilePlaybackId) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn stop(&self, file_id: AudioFilePlaybackId) -> anyhow::Result<()> {
         log::info!("Stopping audio file #{file_id}");
 
         // handle initialize errors
         if self.init_error.lock().unwrap().is_some() {
-            return Err(string_error::new_err(
+            return Err(anyhow!(
                 "Can't play file: Audio playback failed to intialize.",
             ));
         }
@@ -148,7 +149,7 @@ impl Playback {
             player.stop_source(file_id)?;
             Ok(())
         } else {
-            Err(string_error::new_err("Playback not initialized"))
+            Err(anyhow!("Playback not initialized"))
         }
     }
 }
