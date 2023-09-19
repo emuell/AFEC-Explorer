@@ -23,7 +23,6 @@ dependencies = [
  "serde_json",
  "simplelog",
  "sqlite",
- "static_assertions",
  "tauri",
  "tauri-build",
  "tauri-plugin-sqlite",

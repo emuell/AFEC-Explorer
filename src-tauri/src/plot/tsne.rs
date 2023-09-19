@@ -1,7 +1,6 @@
 use super::database;
-use anyhow::{anyhow, ensure, bail};
+use anyhow::{ensure, bail};
 use rstats::Vecg;
-use static_assertions::const_assert;
 
 // -------------------------------------------------------------------------------------------------
 
@@ -43,7 +42,7 @@ pub fn create_plot(
     );
 
     // read database input
-    let mut rows = database::get_tsne_features(db_path)?;
+    let rows = database::get_tsne_features(db_path)?;
     if rows.is_empty() {
         return Ok(vec![]);
     }
@@ -77,20 +76,14 @@ pub fn create_plot(
     let points = embedding.chunks_exact(usize::from(NO_DIMS));
     assert_eq!(points.len(), rows.len());
 
-    // convert results
-    let mut vec = Vec::with_capacity(rows.len());
-    for point in points {
-        // pop row entry, so the compiler can reuse/move existing row values
-        let row = rows.pop_front().unwrap();
-        const_assert!(NO_DIMS == 2); // for "get_unchecked" use below
-        vec.push(PlotEntry {
+    // convert points and rows to PlotEntry
+    Ok(points.zip(rows).map(|(point, row)| {
+        PlotEntry {
             filename: row.filename,
-            x: unsafe { *point.get_unchecked(0) },
-            y: unsafe { *point.get_unchecked(1) },
+            x: point[0],
+            y: point[1],
             categories: row.categories,
             classes: row.classes,
-        });
-    }
-
-    Ok(vec)
+        }})
+    .collect())
 }
