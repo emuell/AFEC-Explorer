@@ -108,7 +108,7 @@ export class FileListDataProvider {
       // keep directories at top or bottom when sorting by name
       if (sortOrder.path === "name") {
         // and do a "natural" sort on names
-        const options = { numeric: true, sensitivity: "base" };
+        const options: Intl.CollatorOptions = { numeric: true, sensitivity: "base" };
         if (sortOrder.direction === 'asc') {
           return a.filename.localeCompare(b.filename, undefined, options);
         } else {

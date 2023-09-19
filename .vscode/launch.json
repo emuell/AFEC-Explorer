@@ -15,6 +15,9 @@
           "build",
           "--manifest-path=./src-tauri/Cargo.toml",
           "--no-default-features"
+        ],
+        "problemMatcher": [
+          "$rustc"
         ]
       },
       "preLaunchTask": "ui:dev"
@@ -24,7 +27,14 @@
       "request": "launch",
       "name": "Tauri Production Debug",
       "cargo": {
-        "args": ["build", "--release", "--manifest-path=./src-tauri/Cargo.toml"]
+        "args": [
+          "build",
+          "--release",
+          "--manifest-path=./src-tauri/Cargo.toml"
+        ],
+        "problemMatcher": [
+          "$rustc"
+        ]
       },
       "preLaunchTask": "ui:build"
     }

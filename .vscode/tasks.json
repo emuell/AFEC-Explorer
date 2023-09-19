@@ -8,27 +8,47 @@
       "type": "shell",
       "isBackground": true,
       "command": "npm",
-      "args": ["run", "dev"]
+      "args": [
+        "run",
+        "dev"
+      ]
     },
     {
       "label": "ui:build",
       "type": "shell",
       "command": "npm",
-      "args": ["run", "build"]
+      "args": [
+        "run",
+        "build"
+      ]
     },
     {
       "label": "tauri:dev",
       "type": "shell",
-      "group": { "kind": "build", "isDefault": true },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
       "command": "npm",
-      "args": ["run", "tauri", "dev"]
+      "args": [
+        "run",
+        "tauri",
+        "dev"
+      ]
     },
     {
       "label": "tauri:build",
       "type": "shell",
-      "group": { "kind": "build", "isDefault": false },
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
       "command": "npm",
-      "args": ["run", "tauri", "build"]
+      "args": [
+        "run",
+        "tauri",
+        "build"
+      ]
     }
   ]
 }
