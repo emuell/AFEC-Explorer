@@ -28,7 +28,7 @@
     "@vaadin/text-field": "^24.0",
     "@vaadin/vertical-layout": "^24.0",
     "d3": "^7.9",
-    "lit": "^3.1",
+    "lit": "^3.0",
     "mobx": "^6.12",
     "pretty-bytes": "^6.1",
     "tauri-plugin-sqlite-api": "github:lzdyes/tauri-plugin-sqlite#v0.1.1"
