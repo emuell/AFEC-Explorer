@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/tauri'
+import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event'
 
 // -------------------------------------------------------------------------------------------------
@@ -22,8 +22,8 @@ let playingFiles = new Map<FileId, String>();
 // See also \function addPlaybackPositionEventListener 
 export function playingAudioFiles(): { id: FileId, path: String }[] {
   let ret = [];
-  for (let e of playingFiles) {
-    ret.push({ id: e[0], path: e[1] })
+  for (let [id, path] of playingFiles) {
+    ret.push({ id, path })
   }
   return ret;
 }
@@ -33,8 +33,14 @@ export function playingAudioFiles(): { id: FileId, path: String }[] {
 // Play back a single audio file. This stops all previously playing files.
 export async function playAudioFile(filePath: string): Promise<FileId> {
   // stop all playing files
-  for (let id of playingFiles.keys()) {
-    await invoke<void>('stop_audio_file', { fileId: id });
+  for (let id of Array.from(playingFiles.keys())) {
+    try {
+      await invoke<void>('stop_audio_file', { fileId: id });
+    } catch (err) {
+      // file maybe already got stopped without a proper notification
+      playingFiles.delete(id);
+      console.error('Failed to stop audio file {id}', err);
+    }
   }
   // start playback of the new file
   let fileId = await invoke<FileId>('play_audio_file', { filePath: filePath });

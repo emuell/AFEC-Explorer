@@ -1,12 +1,12 @@
 use std::{sync::Mutex, time::Duration};
 
 use phonic::{
-    DefaultOutputDevice, FilePlaybackOptions, OutputDevice, PlaybackId, PlaybackStatusContext,
+    DefaultOutputDevice, FilePlaybackOptions, PlaybackId, PlaybackStatusContext,
     PlaybackStatusEvent, Player,
 };
 
 use anyhow::anyhow;
-use tauri::Manager;
+use tauri::Emitter;
 
 // -------------------------------------------------------------------------------------------------
 
@@ -41,7 +41,7 @@ impl Playback {
             Ok(audio_output) => {
                 // create player
                 let (event_sx, event_rx) = crossbeam_channel::unbounded();
-                let player = Player::new(audio_output.sink(), Some(event_sx));
+                let player = Player::new(audio_output, Some(event_sx));
                 // handle events from playback manager
                 Self::process_playback_manager_events(app_handle, event_rx);
                 // memorize player instance
@@ -109,7 +109,8 @@ impl Playback {
                 file_path.as_str(),
                 FilePlaybackOptions::default()
                     .streamed()
-                    .playback_pos_emit_rate(Duration::from_secs_f64(1.0 / 30.0)),
+                    .playback_pos_emit_rate(Duration::from_secs_f64(1.0 / 30.0))
+                    .repeat(0),
             )?;
             log::info!("Decoded audio file has the id #{file_id}");
             Ok(file_id)
@@ -132,6 +133,7 @@ impl Playback {
             player.seek_source(
                 file_id,
                 std::time::Duration::from_millis((seek_pos_seconds * 1000.0) as u64),
+                None,
             )?;
             Ok(())
         } else {
@@ -150,7 +152,7 @@ impl Playback {
         }
         // stop playing
         if let Some(player) = self.player.lock().unwrap().as_mut() {
-            player.stop_source(file_id)?;
+            player.stop_source(file_id, None)?;
             Ok(())
         } else {
             Err(anyhow!("Playback not initialized"))
@@ -217,7 +219,7 @@ pub fn send_playback_position_event(
         file_path: String,
         position: f64,
     }
-    if let Err(error) = app_handle.emit_all(
+    if let Err(error) = app_handle.emit(
         "audio_playback_position",
         PlaybackPositionEvent {
             file_id,
@@ -243,7 +245,7 @@ pub fn send_playback_finished_event(
         file_id: PlaybackId,
         file_path: String,
     }
-    if let Err(error) = app_handle.emit_all(
+    if let Err(error) = app_handle.emit(
         "audio_playback_finished",
         PlaybackFinishedEvent { file_id, file_path },
     ) {

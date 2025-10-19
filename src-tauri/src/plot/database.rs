@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use anyhow::anyhow;
-use sqlite::Connection;
+use sqlx::{query, sqlite::SqlitePool, Row};
 
 // -------------------------------------------------------------------------------------------------
 
@@ -16,8 +16,8 @@ pub struct TsneFeatureRow {
 
 // -------------------------------------------------------------------------------------------------
 
-pub fn get_tsne_features(path: String) -> anyhow::Result<VecDeque<TsneFeatureRow>> {
-    let connection = Connection::open(path)?;
+pub async fn get_tsne_features(path: String) -> anyhow::Result<VecDeque<TsneFeatureRow>> {
+    let pool = SqlitePool::connect(&path).await?;
     let column_names = [
         "filename",
         "classes_VS",
@@ -29,29 +29,22 @@ pub fn get_tsne_features(path: String) -> anyhow::Result<VecDeque<TsneFeatureRow
         "SELECT {} FROM assets WHERE status=\"succeeded\"",
         &column_names.join(",")
     );
-    let statement = connection.prepare(&sql)?;
-    let column_count = statement.column_count();
-    assert_eq!(column_names.len(), column_count);
 
-    let mut cursor = statement.into_cursor();
-    let mut result = VecDeque::new();
+    let rows = query(&sql).fetch_all(&pool).await?;
+    let mut result = VecDeque::with_capacity(rows.len());
 
-    while let Some(row) = cursor.next()? {
+    for row in rows {
         let mut feature_row = TsneFeatureRow::default();
-        for i in 0..column_count {
-            let column_name = *column_names.get(i).unwrap();
-            let value = row
-                .get(i)
-                .ok_or_else(|| anyhow!("Failed to fetch column '{}' value", column_name))?;
-            let value_string = value.as_string().ok_or_else(|| {
-                anyhow!("Failed to convert column '{}' string value", column_name)
-            })?;
-            match column_name {
-                "filename" => feature_row.filename = Box::from(value_string),
-                "classes_VS" => feature_row.classes = serde_json::from_str(value_string)?,
-                "categories_VS" => feature_row.categories = serde_json::from_str(value_string)?,
+        for (i, column_name) in column_names.iter().enumerate() {
+            let value: String = row
+                .try_get(i)
+                .map_err(|_| anyhow!("Failed to fetch column '{}' value", column_name))?;
+            match *column_name {
+                "filename" => feature_row.filename = Box::from(value),
+                "classes_VS" => feature_row.classes = serde_json::from_str(&value)?,
+                "categories_VS" => feature_row.categories = serde_json::from_str(&value)?,
                 "class_signature_VR" | "category_signature_VR" => {
-                    let mut array: Vec<f32> = serde_json::from_str(value_string)?;
+                    let mut array: Vec<f32> = serde_json::from_str(&value)?;
                     feature_row.data.append(&mut array);
                 }
                 _ => {

@@ -1,4 +1,4 @@
-import SQLite from 'tauri-plugin-sqlite-api'
+import SQLite from '@tauri-apps/plugin-sql';
 
 import { File, fileColumnNames } from '../models/file';
 
@@ -14,7 +14,7 @@ export class Database {
       await this.close();
     }
 
-    this._db = await SQLite.open(filename);
+    this._db = await SQLite.load("sqlite:" + filename);
 
     const classNameResult = await this._db.select(
       'SELECT classes FROM classes WHERE classifier="Classifiers"') as Array<any>;
