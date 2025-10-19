@@ -16,7 +16,7 @@ pub struct PlotEntry {
 
 // -------------------------------------------------------------------------------------------------
 
-pub fn create_plot(
+pub async fn create_plot(
     db_path: String,
     theta: f32,
     perplexity: f32,
@@ -42,7 +42,7 @@ pub fn create_plot(
     );
 
     // read database input
-    let rows = database::get_tsne_features(db_path)?;
+    let rows = database::get_tsne_features(db_path).await?;
     if rows.is_empty() {
         return Ok(vec![]);
     }

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "identifier": "main-capability",
+  "description": "Main window capability",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "sql:default",
+    "dialog:default"
+  ]
+}

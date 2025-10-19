@@ -11,7 +11,7 @@ import './components/file-waveview';
 import './components/file-list';
 import './components/error-message';
 
-import { open } from '@tauri-apps/api/dialog';
+import { open } from '@tauri-apps/plugin-dialog';
 
 import '@vaadin/vertical-layout';
 import '@vaadin/split-layout';

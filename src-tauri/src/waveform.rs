@@ -1,4 +1,4 @@
-use phonic::{utils::waveform, FilePlaybackOptions, PreloadedFileSource, Source};
+use phonic::{sources::PreloadedFileSource, utils::waveform, FilePlaybackOptions};
 
 // -------------------------------------------------------------------------------------------------
 
@@ -19,18 +19,15 @@ pub fn generate_waveform(
     resolution: usize,
 ) -> Result<Vec<WaveformPoint>, String> {
     // decode sample file
-    let file_source = PreloadedFileSource::new(
-        file_path.as_str(),
-        None,
-        FilePlaybackOptions::default(),
-        44100,
-    )
-    .map_err(|e| e.to_string())?;
+    let file_source =
+        PreloadedFileSource::from_file(file_path, None, FilePlaybackOptions::default(), 44100)
+            .map_err(|e| e.to_string())?;
+    let file_buffer = file_source.file_buffer();
     // generate waveform
     let data = waveform::mixed_down(
-        &file_source.buffer(),
-        file_source.channel_count(),
-        file_source.sample_rate(),
+        file_buffer.buffer(),
+        file_buffer.channel_count(),
+        file_buffer.sample_rate(),
         resolution,
     );
     Ok(data

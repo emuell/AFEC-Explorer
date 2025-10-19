@@ -13,7 +13,9 @@
   },
   "dependencies": {
     "@adobe/lit-mobx": "^2.2",
-    "@tauri-apps/api": "^1.5",
+    "@tauri-apps/api": "~2.8",
+    "@tauri-apps/plugin-dialog": "^2",
+    "@tauri-apps/plugin-sql": "^2",
     "@vaadin/button": "^24.0",
     "@vaadin/checkbox": "^24.0",
     "@vaadin/dialog": "^24.0",
@@ -28,16 +30,15 @@
     "@vaadin/text-field": "^24.0",
     "@vaadin/vertical-layout": "^24.0",
     "d3": "^7.9",
-    "lit": "^3.0",
-    "mobx": "^6.12",
-    "pretty-bytes": "^6.1",
-    "tauri-plugin-sqlite-api": "github:lzdyes/tauri-plugin-sqlite#v0.1.1"
+    "lit": "^3.3",
+    "mobx": "^6.15",
+    "pretty-bytes": "^7.1"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^1.5",
+    "@tauri-apps/cli": "~2.8",
     "@types/d3": "^7.4",
-    "typescript": "^5.5",
-    "vite": "^5.3"
+    "typescript": "^5.9",
+    "vite": "^7.1"
   },
   "vaadin": {
     "disableUsageStatistics": true
