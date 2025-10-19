@@ -18,9 +18,9 @@ You can generate `afec.db` files with [AFEC](https://github.com/emuell/AFEC)'s c
 
 ## Development
 
-### Requirements
+### Prerequisites
 
-- Tauri: Rust and a C++ Compiler - see [Tauri's Prerequisites](https://tauri.app/v1/guides/getting-started/prerequisites)
+- Tauri: Rust and a C++ Compiler - see [Tauri's Prerequisites](https://tauri.app/start/prerequisites)
 - NPM: Download at [Node.js](https://nodejs.org/en/)
 
 ### Building
